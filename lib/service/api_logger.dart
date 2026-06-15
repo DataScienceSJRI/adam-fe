@@ -5,7 +5,6 @@ class LoggingClient extends http.BaseClient {
 
   @override
   Future<http.StreamedResponse> send(http.BaseRequest request) async {
-    // --- 1. Log Outgoing Request ---
     print('╔════════════════ NETWORK REQUEST ════════════════╗');
     print('║ 🚀 METHOD : ${request.method}');
     print('║ 🔗 URL    : ${request.url}');
@@ -16,11 +15,8 @@ class LoggingClient extends http.BaseClient {
     }
     print('╚═════════════════════════════════════════════════╝');
 
-    // Execute the actual request
     final response = await _inner.send(request);
 
-    // --- 2. Intercept and Log Response ---
-    // We split the stream so we can read the body for logging without breaking the response data flow
     final bytes = await response.stream.toBytes();
     final responseBody = String.fromCharCodes(bytes);
 
@@ -30,7 +26,6 @@ class LoggingClient extends http.BaseClient {
     print('║ 📦 BODY   : $responseBody');
     print('╚═════════════════════════════════════════════════╝');
 
-    // Return a new streamed response since the original stream was already consumed by us
     return http.StreamedResponse(
       Stream.value(bytes),
       response.statusCode,

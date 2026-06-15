@@ -5,6 +5,7 @@ class ApiEndpoints {
 
   static const String login = 'v1/auth/login';
   static const String logout = '${baseUrl}v1/auth/logout';
+  static const String refreshToken = '${baseUrl}v1/auth/refresh';
   static const String getDashboardDetails = 'v1/kpi';
   static const String getRecipes = 'v1/recipes';
   static const String searchRecipes = 'v1/recipes/search';
@@ -22,5 +23,6 @@ class ApiEndpoints {
   static const String getReplacement = 'v1/plan/replacements';
   static const String postReplacement = 'v1/plan/replacements/request';
   static const String reaction = 'v1/plan/reaction';
-
+  static const String reactionRecipe = 'v1/plan/reaction/recipe';
+  static const String editRecipe = "v1/recall";
 }

@@ -2,7 +2,7 @@ import 'package:adam/bloc/auth/login_bloc.dart';
 import 'package:adam/data/repositories/auth_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'dashboard_wrapper.dart';
+import '../dashboard/dashboard_wrapper.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});

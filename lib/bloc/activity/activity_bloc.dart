@@ -1,120 +1,21 @@
-// import 'package:flutter_bloc/flutter_bloc.dart';
-//
-// import '../../data/models/activity_model.dart';
-// import '../../data/repositories/activity_repository.dart';
-//
-// /// =======================================================
-// /// EVENTS
-// /// =======================================================
-//
-// abstract class ActivityEvent {}
-//
-// class SubmitActivityEvent extends ActivityEvent {
-//   final ActivityLog activity;
-//
-//   SubmitActivityEvent(this.activity);
-// }
-//
-// /// =======================================================
-// /// STATES
-// /// =======================================================
-//
-// abstract class ActivityState {}
-//
-// class ActivityInitial extends ActivityState {}
-//
-// class ActivityLoading extends ActivityState {}
-//
-// class ActivitySuccess extends ActivityState {}
-//
-// class ActivityFailure extends ActivityState {
-//   final String message;
-//
-//   ActivityFailure(this.message);
-// }
-//
-// /// =======================================================
-// /// BLOC
-// /// =======================================================
-//
-// class ActivityBloc
-//     extends Bloc<ActivityEvent, ActivityState> {
-//
-//   final ActivityRepository repository;
-//
-//   ActivityBloc({
-//     required this.repository,
-//   }) : super(ActivityInitial()) {
-//
-//     on<SubmitActivityEvent>(
-//       _submitActivity,
-//     );
-//   }
-//
-//   Future<void> _submitActivity(
-//       SubmitActivityEvent event,
-//       Emitter<ActivityState> emit,
-//       ) async {
-//
-//     try {
-//
-//       emit(ActivityLoading());
-//
-//       print("🚀 API CALL STARTED");
-//
-//       final success =
-//       await repository.submitActivity(
-//         event.activity,
-//       );
-//
-//       print("✅ API RESULT: $success");
-//
-//       if (success) {
-//
-//         emit(ActivitySuccess());
-//
-//       } else {
-//
-//         emit(
-//           ActivityFailure(
-//             "Failed to save activity",
-//           ),
-//         );
-//       }
-//
-//     } catch (e) {
-//
-//       print("❌ BLOC ERROR: $e");
-//
-//       emit(
-//         ActivityFailure(
-//           e.toString(),
-//         ),
-//       );
-//     }
-//   }
-// }
 import 'package:adam/data/models/activity_model.dart';
 import 'package:adam/data/repositories/activity_repository.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-
-/// =======================================================
-/// EVENTS
-/// =======================================================
 
 abstract class ActivityEvent {}
 
 class SubmitActivityEvent extends ActivityEvent {
   final ActivityLogModel activity;
+  final DateTime date;
 
-  SubmitActivityEvent(this.activity);
+  SubmitActivityEvent(this.activity, this.date);
 }
 
-class FetchTodayActivitiesEvent extends ActivityEvent {}
+class FetchTodayActivitiesEvent extends ActivityEvent {
+  final DateTime date;
 
-/// =======================================================
-/// STATES
-/// =======================================================
+  FetchTodayActivitiesEvent({required this.date});
+}
 
 abstract class ActivityState {}
 
@@ -134,10 +35,6 @@ class ActivityFailure extends ActivityState {
   ActivityFailure(this.message);
 }
 
-/// =======================================================
-/// BLOC
-/// =======================================================
-
 class ActivityBloc extends Bloc<ActivityEvent, ActivityState> {
   final ActivityRepository repository;
 
@@ -146,10 +43,6 @@ class ActivityBloc extends Bloc<ActivityEvent, ActivityState> {
 
     on<FetchTodayActivitiesEvent>(_fetchTodayActivities);
   }
-
-  /// =======================================================
-  /// SUBMIT ACTIVITY
-  /// =======================================================
 
   Future<void> _submitActivity(
     SubmitActivityEvent event,
@@ -164,8 +57,7 @@ class ActivityBloc extends Bloc<ActivityEvent, ActivityState> {
 
       print("✅ ACTIVITY LOGGED SUCCESS");
 
-      /// Fetch updated list after save
-      final activities = await repository.fetchTodayActivities();
+      final activities = await repository.fetchTodayActivities(event.date);
 
       emit(ActivitySuccess(activities));
     } catch (e) {
@@ -174,10 +66,6 @@ class ActivityBloc extends Bloc<ActivityEvent, ActivityState> {
       emit(ActivityFailure(e.toString()));
     }
   }
-
-  /// =======================================================
-  /// FETCH TODAY ACTIVITIES
-  /// =======================================================
 
   Future<void> _fetchTodayActivities(
     FetchTodayActivitiesEvent event,
@@ -188,7 +76,7 @@ class ActivityBloc extends Bloc<ActivityEvent, ActivityState> {
 
       print("🚀 FETCH ACTIVITIES API STARTED");
 
-      final activities = await repository.fetchTodayActivities();
+      final activities = await repository.fetchTodayActivities(event.date);
 
       print("✅ ACTIVITIES FETCHED");
 

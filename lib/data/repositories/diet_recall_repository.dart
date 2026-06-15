@@ -18,7 +18,6 @@ class DietRecallRepository {
     required List<String> quantities,
   }) async {
     try {
-      /// TOKEN
       final prefs = await SharedPreferences.getInstance();
 
       final token = prefs.getString('access_token');
@@ -68,6 +67,8 @@ class DietRecallRepository {
     required String quantity,
     required String planId,
     required bool didEatAsPlanned,
+    required String date,
+    required String unit
   }) async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -78,20 +79,21 @@ class DietRecallRepository {
         throw Exception("Access token missing");
       }
 
-      final today = DateTime.now();
+      // final today = DateTime.now();
 
-      final formattedDate =
-          "${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}";
+      // final formattedDate =
+      //     "${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}";
 
       print("📡 DIET RECALL API ===== ${ApiEndpoints.postDietRecall}");
 
       final body = {
         "recipe_code": recipeCode,
-        "date": formattedDate,
+        "date": date,
         "did_eat_as_planned": didEatAsPlanned,
         "meal_slot": mealSlot.toLowerCase(),
         "quantity": quantity,
         "plan_id": planId,
+        "unit":unit
       };
 
       print("📦 REQUEST BODY ===== $body");

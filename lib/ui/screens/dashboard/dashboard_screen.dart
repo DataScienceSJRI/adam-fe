@@ -1,9 +1,8 @@
 import 'package:adam/bloc/dashboard/dashboard_bloc.dart';
 import 'package:adam/data/models/dashboard_model.dart';
 import 'package:adam/data/repositories/dashboard_repository.dart';
-import 'package:adam/ui/screens/notifications_screen.dart';
-import 'package:adam/ui/screens/recipes_screen.dart';
-import 'package:adam/ui/shared_widgets/shimmer.dart';
+import 'package:adam/ui/screens/recipes/recipes_screen.dart';
+import 'package:adam/ui/utils/shimmer.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -24,7 +23,7 @@ class DashboardScreenState extends State<DashboardScreen> {
     PackageInfo packageInfo = await PackageInfo.fromPlatform();
     setState(() {
       print("${packageInfo.version}+${packageInfo.buildNumber}");
-      _version = "${packageInfo.version}";
+      _version = packageInfo.version;
     });
   }
 
@@ -86,28 +85,6 @@ class DashboardScreenState extends State<DashboardScreen> {
                 },
               ),
             ),
-
-            Container(
-              margin: const EdgeInsets.only(right: 16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: IconButton(
-                icon: const Icon(
-                  Icons.notifications_none_rounded,
-                  color: Color(0xFF0F5132),
-                ),
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const NotificationsScreen(),
-                    ),
-                  );
-                },
-              ),
-            ),
           ],
         ),
 
@@ -136,7 +113,7 @@ class DashboardScreenState extends State<DashboardScreen> {
 
                   children: [
                     Padding(
-                      padding: EdgeInsetsGeometry.only(left: 12,bottom: 8),
+                      padding: EdgeInsetsGeometry.only(left: 12, bottom: 8),
                       child: Text(
                         'Version $_version',
                         style: TextStyle(
@@ -219,6 +196,9 @@ class DashboardScreenState extends State<DashboardScreen> {
                     _buildBloodSugarCard(dashboard),
 
                     const SizedBox(height: 18),
+                    _buildGlycemicLoadCard(dashboard.glycemicLoad ?? 0),
+
+                    const SizedBox(height: 18),
 
                     _buildTodayNutritionCard(dashboard),
                   ],
@@ -277,6 +257,121 @@ class DashboardScreenState extends State<DashboardScreen> {
                 ),
               ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGlycemicLoadCard(double gl) {
+    Color badgeColor;
+    String status;
+
+    if (gl <= 10) {
+      badgeColor = Colors.green;
+      status = "Low";
+    } else if (gl <= 20) {
+      badgeColor = Colors.orange;
+      status = "Moderate";
+    } else {
+      badgeColor = Colors.red;
+      status = "High";
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(.04),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: const BoxDecoration(
+                  color: Color(0xFFEAF9F3),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.water_drop_outlined,
+                  color: Color(0xFF0F5132),
+                ),
+              ),
+
+              const SizedBox(width: 12),
+
+              const Expanded(
+                child: Text(
+                  "Glycemic Load",
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+              ),
+
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: badgeColor.withOpacity(.12),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  status,
+                  style: TextStyle(
+                    color: badgeColor,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 24),
+
+          Center(
+            child: Column(
+              children: [
+                Text(
+                  gl.toStringAsFixed(1),
+                  style: const TextStyle(
+                    fontSize: 46,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF0F5132),
+                  ),
+                ),
+
+                const SizedBox(height: 8),
+
+                Text(
+                  "Today's Glycemic Load",
+                  style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 20),
+
+          ClipRRect(
+            borderRadius: BorderRadius.circular(20),
+            child: LinearProgressIndicator(
+              minHeight: 10,
+              value: (gl / 40).clamp(0.0, 1.0),
+              backgroundColor: Colors.grey.shade200,
+              valueColor: AlwaysStoppedAnimation(badgeColor),
+            ),
           ),
         ],
       ),

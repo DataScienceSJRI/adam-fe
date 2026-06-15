@@ -1,11 +1,14 @@
+import 'dart:convert';
 import 'package:adam/bloc/plan_meal/plan_meal_bloc.dart';
 import 'package:adam/data/models/plan_meal_model.dart';
 import 'package:adam/data/repositories/diet_recall_repository.dart';
 import 'package:adam/data/repositories/plan_meal_repository.dart';
-import 'package:adam/ui/shared_widgets/custom_snackbar.dart';
-import 'package:adam/ui/shared_widgets/shimmer.dart';
+import 'package:adam/ui/utils/custom_snackbar.dart';
+import 'package:adam/ui/utils/shimmer.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class MealPlanScreen extends StatefulWidget {
   const MealPlanScreen({super.key});
@@ -18,11 +21,9 @@ class MealPlanScreenState extends State<MealPlanScreen> {
   int selectedDay = 0;
   late DateTime selectedDate;
   final DietRecallRepository _dietRepo = DietRecallRepository();
-
   List<Map<String, dynamic>> days = [];
   late DateTime weekStartDate;
   final List<String> allMealSlots = ['breakfast', 'lunch', 'dinner', 'snacks'];
-
   List<dynamic> recallItems = [];
   final MealPlanRepository mealPlanRepository = MealPlanRepository();
   final now = DateTime.now();
@@ -30,35 +31,33 @@ class MealPlanScreenState extends State<MealPlanScreen> {
       "${DateTime.now().year}-${DateTime.now().month.toString().padLeft(2, '0')}-${DateTime.now().day.toString().padLeft(2, '0')}";
   Map<String, dynamic> mealReactions = {};
   String? currentPlanId;
+  List<MealPlanModel> savedMeals = [];
+  bool useSavedMeals = false;
 
-  // @override
-  // void initState() {
-  //   super.initState();
-  //   selectedDate = DateTime.now();
-  //   _generateWeek(selectedDate);
-  //   selectedDay = selectedDate.weekday - 1;
-  //   final now = DateTime.now();
-  //   days = List.generate(7, (index) {
-  //     final date = now.add(Duration(days: index));
-  //     _loadAllReactions();
-  //     return {
-  //       "day": _getDayLetter(date.weekday),
-  //       "date": date.day.toString(),
-  //       "fullDate": date,
-  //     };
-  //   });
-  //
-  //   // _fetchRecall();
-  // }
   @override
   void initState() {
     super.initState();
     selectedDate = DateTime.now();
-
     _generateWeek(selectedDate);
     selectedDay = selectedDate.weekday - 1;
-
     _loadAllReactions();
+    _fetchRecall(selectedDate);
+    savedMealPlan();
+  }
+
+  Future<void> savedMealPlan() async {
+    final prefs = await SharedPreferences.getInstance();
+    final mealPlanData = prefs.getString('meal_plan_data');
+    if (mealPlanData != null) {
+      final List decoded = jsonDecode(mealPlanData);
+      savedMeals = decoded.map((e) => MealPlanModel.fromJson(e)).toList();
+      useSavedMeals = true;
+
+      print("✅ Using cached meal plan ${savedMeals.length}");
+      print("saved shared meals ${savedMeals.length}");
+
+      setState(() {});
+    }
   }
 
   Future<void> _loadAllReactions() async {
@@ -79,26 +78,26 @@ class MealPlanScreenState extends State<MealPlanScreen> {
     });
   }
 
-  // Future<void> _fetchRecall() async {
-  //   try {
-  //     final now = DateTime.now();
-  //
-  //     final formattedDate =
-  //         "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
-  //
-  //     final response = await _dietRepo.getRecall(date: formattedDate);
-  //
-  //     if (!mounted) return;
-  //
-  //     setState(() {
-  //       recallItems = response['items'] ?? [];
-  //     });
-  //
-  //     print("✅ RECALL ITEMS ===== $recallItems");
-  //   } catch (e) {
-  //     print("❌ RECALL ERROR ===== $e");
-  //   }
-  // }
+  Future<void> _fetchRecall(DateTime date) async {
+    try {
+      final String formattedDate = DateFormat(
+        'yyyy-MM-dd',
+      ).format(selectedDate);
+
+      final response = await _dietRepo.getRecall(date: formattedDate);
+
+      if (!mounted) return;
+
+      setState(() {
+        recallItems = response['items'] ?? [];
+      });
+
+      print("✅ RECALL ITEMS ===== $recallItems");
+    } catch (e) {
+      print("❌ RECALL ERROR ===== $e");
+    }
+  }
+
   void _generateWeek(DateTime referenceDate) {
     final monday = referenceDate.subtract(
       Duration(days: referenceDate.weekday - 1),
@@ -263,6 +262,7 @@ class MealPlanScreenState extends State<MealPlanScreen> {
                                 context.read<MealPlanBloc>().add(
                                   FetchMealPlanEvent(date: targetDateString),
                                 );
+                                _fetchRecall(selectedDate);
                               },
                               icon: const Icon(Icons.chevron_left, size: 20),
                             ),
@@ -285,6 +285,7 @@ class MealPlanScreenState extends State<MealPlanScreen> {
                                 context.read<MealPlanBloc>().add(
                                   FetchMealPlanEvent(date: targetDateString),
                                 );
+                                _fetchRecall(selectedDate);
                               },
                               icon: const Icon(Icons.chevron_right, size: 20),
                             ),
@@ -316,6 +317,7 @@ class MealPlanScreenState extends State<MealPlanScreen> {
                                 BlocProvider.of<MealPlanBloc>(context).add(
                                   FetchMealPlanEvent(date: targetDateString),
                                 );
+                                _fetchRecall(selectedDate);
                               },
                               child: Container(
                                 width: 38,
@@ -402,7 +404,6 @@ class MealPlanScreenState extends State<MealPlanScreen> {
                             ),
                           )
                         else ...[
-                          // BREAKFAST
                           if (breakfastMeals.isNotEmpty)
                             _buildMealSection(
                               context,
@@ -415,7 +416,6 @@ class MealPlanScreenState extends State<MealPlanScreen> {
 
                           const SizedBox(height: 16),
 
-                          // LUNCH
                           if (lunchMeals.isNotEmpty)
                             _buildMealSection(
                               context,
@@ -428,7 +428,6 @@ class MealPlanScreenState extends State<MealPlanScreen> {
 
                           const SizedBox(height: 16),
 
-                          // DINNER
                           if (dinnerMeals.isNotEmpty)
                             _buildMealSection(
                               context,
@@ -441,7 +440,6 @@ class MealPlanScreenState extends State<MealPlanScreen> {
 
                           const SizedBox(height: 16),
 
-                          // SNACK
                           if (snacksMeals.isNotEmpty)
                             _buildMealSection(
                               context,
@@ -484,6 +482,7 @@ class MealPlanScreenState extends State<MealPlanScreen> {
       meals: meals,
       icon: icon,
       iconColor: iconColor,
+      isLogged: isLogged,
       child: Column(
         children: [
           ...meals.map((meal) {
@@ -491,69 +490,65 @@ class MealPlanScreenState extends State<MealPlanScreen> {
               padding: const EdgeInsets.only(bottom: 10),
               child: GestureDetector(
                 onLongPress: () async {
-                  showDialog(
-                    context: context,
-                    barrierDismissible: false,
-                    builder: (_) => Center(
-                      child: CircularProgressIndicator(
-                        color: const Color(0xFF007A50),
+                  if (!isLogged) {
+                    showDialog(
+                      context: context,
+                      barrierDismissible: false,
+                      builder: (_) => Center(
+                        child: CircularProgressIndicator(
+                          color: const Color(0xFF007A50),
+                        ),
                       ),
-                    ),
-                  );
-
-                  try {
-                    final now = DateTime.now();
-
-                    final formattedDate =
-                        "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
-
-                    final response = await MealPlanRepository()
-                        .getPlanReplacement(
-                          date: formattedDate,
-                          day: "1",
-                          mealSlot: mealSlot,
-                          recipeCode: meal.recipeCode,
-                        );
-
-                    if (context.mounted) {
-                      Navigator.pop(context); // close loader
-                    }
-
-                    final replacements = response['alternatives'] ?? [];
-
-                    showSwapFoodBottomSheet(
-                      context,
-                      currentMeal: meal,
-                      alternatives: replacements,
                     );
-                  } catch (e) {
-                    if (context.mounted) {
-                      Navigator.pop(context); // close loader
-                      AppSnackBar.show(
+
+                    try {
+                      final now = DateTime.now();
+
+                      final formattedDate =
+                          "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
+
+                      final response = await MealPlanRepository()
+                          .getPlanReplacement(
+                            date: formattedDate,
+                            day: "1",
+                            mealSlot: mealSlot,
+                            recipeCode: meal.recipeCode,
+                          );
+
+                      if (context.mounted) {
+                        Navigator.pop(context);
+                      }
+
+                      final replacements = response['alternatives'] ?? [];
+
+                      showSwapFoodBottomSheet(
                         context,
-                        message: "Failed to fetch alternatives",
-                        type: SnackBarType.error,
+                        currentMeal: meal,
+                        alternatives: replacements,
                       );
-                      // ScaffoldMessenger.of(context).showSnackBar(
-                      //   const SnackBar(
-                      //     content: Text("Failed to fetch alternatives"),
-                      //   ),
-                      // );
+                    } catch (e) {
+                      if (context.mounted) {
+                        Navigator.pop(context);
+                        AppSnackBar.show(
+                          context,
+                          message: "Failed to fetch alternatives",
+                          type: SnackBarType.error,
+                        );
+                      }
                     }
                   }
                 },
                 child: _foodItem(
                   context,
                   mealTitle: meal.mealType,
-                  recipeCode: meals
-                      .map((e) => e.recipeCode.toString())
-                      .toList(),
+                  recipeCode: meal.recipeCode.toString(),
                   planId: meals.isNotEmpty ? meals.first.planId.toString() : "",
                   image: meal.imageUrl,
                   title: meal.foodName,
                   subtitle:
-                      '${meal.quantity} • ${meal.calories.toStringAsFixed(0)} kcal',
+                      '${meal.quantity} ${meal.quantityUnit} • ${meal.calories.toStringAsFixed(0)} kcal • ${meal.glValue?.toStringAsFixed(2)}',
                   reaction: meal.reaction,
+                  isLogged: isLogged,
                 ),
               ),
             );
@@ -594,130 +589,140 @@ class MealPlanScreenState extends State<MealPlanScreen> {
     required Color iconColor,
     required List<MealPlanModel> meals,
     required Widget child,
+    required bool isLogged,
   }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE2E2E2)),
-      ),
-      child: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(14, 14, 14, 10),
-            child: Row(
-              children: [
-                Icon(icon, size: 18, color: iconColor),
+    return Opacity(
+      opacity: isLogged ? 0.5 : 1,
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFE2E2E2)),
+        ),
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 14, 14, 10),
+              child: Row(
+                children: [
+                  Icon(icon, size: 18, color: iconColor),
 
-                const SizedBox(width: 8),
+                  const SizedBox(width: 8),
 
-                Text(
-                  mealTitle,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
+                  Text(
+                    mealTitle,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                ),
 
-                const Spacer(),
+                  const Spacer(),
 
-                // LIKE BUTTON
-                GestureDetector(
-                  onTap: () async {
-                    final targetDateString =
-                        "${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}";
+                  GestureDetector(
+                    onTap: () async {
+                      if (!isLogged) {
+                        final targetDateString =
+                            "${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}";
 
-                    print("👎 likes $mealTitle");
+                        print("👎 likes $mealTitle");
 
-                    await MealPlanRepository().sendMealReaction(
-                      date: formattedDate,
-                      mealSlot: mealTitle.toLowerCase(),
-                      planId: meals.isNotEmpty
-                          ? meals.first.planId.toString()
-                          : "",
-                      reaction: "like",
-                      recipeCodes: meals
-                          .map((e) => e.recipeCode.toString())
-                          .toList(),
-                    );
-                    _fetchMealReaction(mealSlot: mealTitle);
-                    AppSnackBar.show(
-                      context,
-                      message: '$mealTitle liked',
-                      type: SnackBarType.success,
-                    );
-                    BlocProvider.of<MealPlanBloc>(
-                      parentContext,
-                    ).add(FetchMealPlanEvent(date: targetDateString));
-                  },
-                  child: Icon(
-                    Icons.thumb_up_alt_outlined,
-                    size: 18,
-                    color:
-                        (meals.isNotEmpty &&
-                            meals.first.comboReaction == "like")
-                        ? Colors.red
-                        : Colors.black54,
-                    // color: Colors.black54,
+                        await MealPlanRepository().sendMealReaction(
+                          date: targetDateString,
+                          mealSlot: mealTitle.toLowerCase(),
+                          planId: meals.isNotEmpty
+                              ? meals.first.planId.toString()
+                              : "",
+                          reaction: "like",
+                          recipeCodes: meals
+                              .map((e) => e.recipeCode.toString())
+                              .toList(),
+                        );
+                        _fetchMealReaction(mealSlot: mealTitle);
+                        AppSnackBar.show(
+                          context,
+                          message: '$mealTitle liked',
+                          type: SnackBarType.success,
+                        );
+                        BlocProvider.of<MealPlanBloc>(
+                          parentContext,
+                        ).add(FetchMealPlanEvent(date: targetDateString));
+                      }
+                    },
+                    child: Icon(
+                      meals.first.comboReaction == "like"
+                          ? Icons.thumb_up_alt
+                          : Icons.thumb_up_alt_outlined,
+                      size: 18,
+                      color:
+                          (meals.isNotEmpty &&
+                              meals.first.comboReaction == "like")
+                          ? Colors.green
+                          : Colors.black54,
+                    ),
                   ),
-                ),
 
-                const SizedBox(width: 12),
+                  const SizedBox(width: 12),
 
-                GestureDetector(
-                  onTap: () async {
-                    final targetDateString =
-                        "${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}";
+                  GestureDetector(
+                    onTap: () async {
+                      if (!isLogged) {
+                        final targetDateString =
+                            "${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}";
 
-                    print("👎 Disliked $mealTitle");
+                        print("👎 Disliked $mealTitle");
 
-                    await MealPlanRepository().sendMealReaction(
-                      date: formattedDate,
-                      mealSlot: mealTitle.toLowerCase(),
-                      planId: meals.isNotEmpty
-                          ? meals.first.planId.toString()
-                          : "",
-                      reaction: "dislike",
-                      recipeCodes: meals
-                          .map((e) => e.recipeCode.toString())
-                          .toList(),
-                    );
-                    _fetchMealReaction(mealSlot: mealTitle);
-                    AppSnackBar.show(
-                      context,
-                      message: '$mealTitle disliked',
-                      type: SnackBarType.error,
-                    );
-                    BlocProvider.of<MealPlanBloc>(
-                      parentContext,
-                    ).add(FetchMealPlanEvent(date: targetDateString));
-                  },
-                  child: Icon(
-                    Icons.thumb_down_alt_outlined,
-                    size: 18,
-                    color:
-                        (meals.isNotEmpty &&
-                            meals.first.comboReaction == "dislike")
-                        ? Colors.green
-                        : Colors.black54,
+                        await MealPlanRepository().sendMealReaction(
+                          date: targetDateString,
+                          mealSlot: mealTitle.toLowerCase(),
+                          planId: meals.isNotEmpty
+                              ? meals.first.planId.toString()
+                              : "",
+                          reaction: "dislike",
+                          recipeCodes: meals
+                              .map((e) => e.recipeCode.toString())
+                              .toList(),
+                        );
+                        _fetchMealReaction(mealSlot: mealTitle);
+                        AppSnackBar.show(
+                          context,
+                          message: '$mealTitle disliked',
+                          type: SnackBarType.error,
+                        );
+                        BlocProvider.of<MealPlanBloc>(
+                          parentContext,
+                        ).add(FetchMealPlanEvent(date: targetDateString));
+                      }
+                    },
+                    child: Icon(
+                      meals.first.comboReaction == "dislike"
+                          ? Icons.thumb_down_alt
+                          : Icons.thumb_down_alt_outlined,
+                      size: 18,
+                      color:
+                          (meals.isNotEmpty &&
+                              meals.first.comboReaction == "dislike")
+                          ? Colors.red
+                          : Colors.black54,
+                    ),
                   ),
-                ),
 
-                const SizedBox(width: 14),
+                  const SizedBox(width: 14),
 
-                Text(
-                  time,
-                  style: const TextStyle(fontSize: 12, color: Colors.black54),
-                ),
-              ],
+                  Text(
+                    time,
+                    style: const TextStyle(fontSize: 12, color: Colors.black54),
+                  ),
+                ],
+              ),
             ),
-          ),
 
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            child: child,
-          ),
-        ],
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              child: child,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -729,8 +734,9 @@ class MealPlanScreenState extends State<MealPlanScreen> {
     required String subtitle,
     required String mealTitle,
     required String planId,
-    required List<String> recipeCode,
+    required String recipeCode,
     required String? reaction,
+    required bool isLogged,
   }) {
     return Container(
       padding: const EdgeInsets.all(10),
@@ -740,11 +746,10 @@ class MealPlanScreenState extends State<MealPlanScreen> {
       ),
       child: Row(
         children: [
-          // IMAGE
           ClipRRect(
             borderRadius: BorderRadius.circular(10),
             child: Image.network(
-              image,
+              'https://datatools.sjri.res.in/static/VD/food_images_large/$recipeCode.jpg',
               width: 44,
               height: 44,
               fit: BoxFit.cover,
@@ -759,7 +764,6 @@ class MealPlanScreenState extends State<MealPlanScreen> {
 
           const SizedBox(width: 12),
 
-          // TITLE + SUBTITLE
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -782,40 +786,41 @@ class MealPlanScreenState extends State<MealPlanScreen> {
             ),
           ),
 
-          // LIKE / DISLIKE
           Row(
             children: [
               GestureDetector(
                 onTap: () async {
-                  final targetDateString =
-                      "${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}";
+                  if (!isLogged) {
+                    final targetDateString =
+                        "${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}";
+                    print("date is $targetDateString");
 
-                  print("👎 likes $mealTitle");
+                    print("👎 likes $mealTitle");
 
-                  await MealPlanRepository().sendMealReaction(
-                    date: formattedDate,
-                    mealSlot: mealTitle.toLowerCase(),
-                    planId: planId,
-                    reaction: "like",
-                    recipeCodes: recipeCode,
-                  );
-                  _fetchMealReaction(mealSlot: mealTitle);
-                  AppSnackBar.show(
-                    context,
-                    message: '$mealTitle liked',
-                    type: SnackBarType.success,
-                  );
-                  BlocProvider.of<MealPlanBloc>(
-                    parentContext,
-                  ).add(FetchMealPlanEvent(date: targetDateString));
-                  // ScaffoldMessenger.of(
-                  //   context,
-                  // ).showSnackBar(SnackBar(content: Text('$mealTitle Liked')));
+                    await MealPlanRepository().sendRecipeMealReaction(
+                      date: targetDateString,
+                      mealSlot: mealTitle.toLowerCase(),
+                      planId: planId,
+                      reaction: "like",
+                      recipeCodes: recipeCode,
+                    );
+                    _fetchMealReaction(mealSlot: mealTitle);
+                    AppSnackBar.show(
+                      context,
+                      message: '$mealTitle liked',
+                      type: SnackBarType.success,
+                    );
+                    BlocProvider.of<MealPlanBloc>(
+                      parentContext,
+                    ).add(FetchMealPlanEvent(date: targetDateString));
+                  }
                 },
                 child: Icon(
-                  Icons.thumb_up_alt_outlined,
+                  reaction == "like"
+                      ? Icons.thumb_up_alt
+                      : Icons.thumb_up_alt_outlined,
                   size: 18,
-                  color: (reaction == "like") ? Colors.red : Colors.black54,
+                  color: (reaction == "like") ? Colors.green : Colors.black54,
                 ),
               ),
 
@@ -823,34 +828,36 @@ class MealPlanScreenState extends State<MealPlanScreen> {
 
               GestureDetector(
                 onTap: () async {
-                  final targetDateString =
-                      "${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}";
+                  if (!isLogged) {
+                    final targetDateString =
+                        "${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}";
 
-                  print("👎 Disliked $mealTitle");
+                    print("👎 Disliked $mealTitle");
 
-                  await MealPlanRepository().sendMealReaction(
-                    date: formattedDate,
-                    mealSlot: mealTitle.toLowerCase(),
-                    planId: planId,
-                    reaction: "dislike",
-                    recipeCodes: recipeCode,
-                  );
-                  _fetchMealReaction(mealSlot: mealTitle);
-                  AppSnackBar.show(
-                    context,
-                    message: '$mealTitle Disliked',
-                    type: SnackBarType.error,
-                  );
-                  BlocProvider.of<MealPlanBloc>(
-                    parentContext,
-                  ).add(FetchMealPlanEvent(date: targetDateString));
+                    await MealPlanRepository().sendRecipeMealReaction(
+                      date: targetDateString,
+                      mealSlot: mealTitle.toLowerCase(),
+                      planId: planId,
+                      reaction: "dislike",
+                      recipeCodes: recipeCode,
+                    );
+                    _fetchMealReaction(mealSlot: mealTitle);
+                    AppSnackBar.show(
+                      context,
+                      message: '$mealTitle Disliked',
+                      type: SnackBarType.error,
+                    );
+                    BlocProvider.of<MealPlanBloc>(
+                      parentContext,
+                    ).add(FetchMealPlanEvent(date: targetDateString));
+                  }
                 },
                 child: Icon(
-                  Icons.thumb_down_alt_outlined,
+                  reaction == "dislike"
+                      ? Icons.thumb_down_alt
+                      : Icons.thumb_down_alt_outlined,
                   size: 18,
-                  color: (reaction == "dislike")
-                      ? Colors.green
-                      : Colors.black54,
+                  color: (reaction == "dislike") ? Colors.red : Colors.black54,
                 ),
               ),
             ],
@@ -1114,7 +1121,6 @@ class MealPlanScreenState extends State<MealPlanScreen> {
       ),
       child: Row(
         children: [
-          // ================= IMAGE =================
           ClipRRect(
             borderRadius: BorderRadius.circular(10),
             child: Image.network(
@@ -1127,7 +1133,6 @@ class MealPlanScreenState extends State<MealPlanScreen> {
 
           const SizedBox(width: 12),
 
-          // ================= TEXT =================
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1169,7 +1174,6 @@ class MealPlanScreenState extends State<MealPlanScreen> {
             ),
           ),
 
-          // ================= SELECT =================
           if (selected)
             const CircleAvatar(
               radius: 11,

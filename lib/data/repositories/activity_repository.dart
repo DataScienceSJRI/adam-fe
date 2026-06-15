@@ -27,14 +27,14 @@ class ActivityRepository {
     }
   }
 
-  Future<List<ActivityHistoryModel>> fetchTodayActivities() async {
+  Future<List<ActivityHistoryModel>> fetchTodayActivities(DateTime date) async {
     final prefs = await SharedPreferences.getInstance();
 
     final token = prefs.getString('access_token');
-    final String todayDate = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    final formattedDate = DateFormat('yyyy-MM-dd').format(date);
     try {
       final response = await _apiService.get(
-        "${ApiEndpoints.getActivities}?$todayDate&limit=20&offset=0",
+        "${ApiEndpoints.getActivities}?$formattedDate&limit=20&offset=0",
         headers: {
           'Authorization': 'Bearer $token',
           'accept': 'application/json',

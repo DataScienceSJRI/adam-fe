@@ -3,22 +3,48 @@ import 'package:adam/bloc/profile/profile_bloc.dart';
 import 'package:adam/data/models/profile_model.dart';
 import 'package:adam/data/repositories/logout_repository.dart';
 import 'package:adam/data/repositories/profile_repository.dart';
-import 'package:adam/ui/screens/login_screen.dart';
-import 'package:adam/ui/shared_widgets/shimmer.dart';
+import 'package:adam/ui/screens/login/login_screen.dart';
+import 'package:adam/ui/utils/shimmer.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
 
-  Widget _field(TextEditingController controller, String hint) {
+  Widget _modernField(
+    TextEditingController controller,
+    String hint,
+    IconData icon,
+  ) {
     return TextField(
       controller: controller,
-
       decoration: InputDecoration(
         hintText: hint,
 
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        prefixIcon: Icon(icon, color: const Color(0xFF008C5E)),
+
+        filled: true,
+        fillColor: const Color(0xFFF8FAF9),
+
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 16,
+        ),
+
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide.none,
+        ),
+
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: Colors.grey.shade200),
+        ),
+
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: Color(0xFF008C5E), width: 1.5),
+        ),
       ),
     );
   }
@@ -48,113 +74,251 @@ class ProfileScreen extends StatelessWidget {
       text: profile.dietRestrictions,
     );
 
+    // showDialog(
+    //   context: context,
+    //   builder: (_) {
+    //     return AlertDialog(
+    //       shape: RoundedRectangleBorder(
+    //         borderRadius: BorderRadius.circular(20),
+    //       ),
+    //
+    //       title: const Text(
+    //         "Edit Profile",
+    //         style: TextStyle(fontWeight: FontWeight.bold),
+    //       ),
+    //
+    //       content: SingleChildScrollView(
+    //         child: Column(
+    //           mainAxisSize: MainAxisSize.min,
+    //           children: [
+    //             _field(weightController, "Weight"),
+    //             const SizedBox(height: 12),
+    //             _field(hba1cController, "HbA1c"),
+    //             const SizedBox(height: 12),
+    //             _field(activityController, "Activity Level"),
+    //           ],
+    //         ),
+    //       ),
+    //
+    //       actions: [
+    //         TextButton(
+    //           onPressed: () {
+    //             Navigator.pop(context);
+    //           },
+    //
+    //           child: const Text("Cancel"),
+    //         ),
+    //
+    //         ElevatedButton(
+    //           style: ElevatedButton.styleFrom(
+    //             backgroundColor: const Color(0xFF0F5132),
+    //           ),
+    //
+    //           onPressed: () async {
+    //             final updatedProfile = ProfileModel(
+    //               userId: profile.userId,
+    //
+    //               age: int.tryParse(ageController.text) ?? 0,
+    //
+    //               gender: genderController.text,
+    //
+    //               weight: double.tryParse(weightController.text) ?? 0,
+    //
+    //               height: double.tryParse(heightController.text) ?? 0,
+    //
+    //               hba1c: double.tryParse(hba1cController.text) ?? 0,
+    //
+    //               activityLevel: activityController.text,
+    //
+    //               dietRestrictions: dietController.text,
+    //
+    //               breakfastTime: profile.breakfastTime!.isEmpty
+    //                   ? null
+    //                   : profile.breakfastTime,
+    //               lunchTime: profile.lunchTime!.isEmpty
+    //                   ? null
+    //                   : profile.lunchTime,
+    //               dinnerTime: profile.dinnerTime!.isEmpty
+    //                   ? null
+    //                   : profile.dinnerTime,
+    //             );
+    //
+    //             try {
+    //               await ProfileRepository().updateProfile(updatedProfile);
+    //
+    //               Navigator.pop(context);
+    //
+    //               ScaffoldMessenger.of(context).showSnackBar(
+    //                 const SnackBar(
+    //                   content: Text("Profile updated successfully"),
+    //                 ),
+    //               );
+    //
+    //               context.read<ProfileBloc>().add(FetchProfileEvent());
+    //             } catch (e) {
+    //               ScaffoldMessenger.of(
+    //                 context,
+    //               ).showSnackBar(SnackBar(content: Text(e.toString())));
+    //             }
+    //           },
+    //
+    //           child: const Text("Save", style: TextStyle(color: Colors.white)),
+    //         ),
+    //       ],
+    //     );
+    //   },
+    // );
     showDialog(
       context: context,
-
       builder: (_) {
-        return AlertDialog(
+        return Dialog(
+          backgroundColor: Colors.white,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(24),
           ),
-
-          title: const Text(
-            "Edit Profile",
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
-
-          content: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
             child: Column(
               mainAxisSize: MainAxisSize.min,
-
               children: [
-                _field(ageController, "Age"),
-                const SizedBox(height: 12),
+                Container(
+                  height: 60,
+                  width: 60,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEAF9F3),
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  child: const Icon(
+                    Icons.person_outline,
+                    color: Color(0xFF008C5E),
+                    size: 30,
+                  ),
+                ),
 
-                _field(genderController, "Gender"),
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
 
-                _field(weightController, "Weight"),
-                const SizedBox(height: 12),
+                const Text(
+                  "Edit Profile",
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                ),
 
-                _field(heightController, "Height"),
-                const SizedBox(height: 12),
+                const SizedBox(height: 6),
 
-                _field(hba1cController, "HbA1c"),
-                const SizedBox(height: 12),
+                const Text(
+                  "Update your health information",
+                  style: TextStyle(color: Colors.black54),
+                ),
 
-                _field(activityController, "Activity Level"),
-                const SizedBox(height: 12),
+                const SizedBox(height: 24),
 
-                _field(dietController, "Diet Restrictions"),
+                _modernField(
+                  weightController,
+                  "Weight (kg)",
+                  Icons.monitor_weight_outlined,
+                ),
+
+                const SizedBox(height: 14),
+
+                _modernField(hba1cController, "HbA1c", Icons.favorite_border),
+
+                const SizedBox(height: 14),
+
+                _modernField(
+                  activityController,
+                  "Activity Level",
+                  Icons.directions_run,
+                ),
+
+                const SizedBox(height: 24),
+
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () {
+                          Navigator.pop(context);
+                        },
+                        style: OutlinedButton.styleFrom(
+                          minimumSize: const Size.fromHeight(52),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                        child: const Text("Cancel"),
+                      ),
+                    ),
+
+                    const SizedBox(width: 12),
+
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () async {
+                          final updatedProfile = ProfileModel(
+                            userId: profile.userId,
+                            age: int.tryParse(ageController.text) ?? 0,
+                            gender: genderController.text,
+                            weight: double.tryParse(weightController.text) ?? 0,
+                            height: double.tryParse(heightController.text) ?? 0,
+                            hba1c: double.tryParse(hba1cController.text) ?? 0,
+                            activityLevel: activityController.text,
+                            dietRestrictions: dietController.text,
+                            breakfastTime: profile.breakfastTime!.isEmpty
+                                ? null
+                                : profile.breakfastTime,
+                            lunchTime: profile.lunchTime!.isEmpty
+                                ? null
+                                : profile.lunchTime,
+                            dinnerTime: profile.dinnerTime!.isEmpty
+                                ? null
+                                : profile.dinnerTime,
+                          );
+
+                          try {
+                            await ProfileRepository().updateProfile(
+                              updatedProfile,
+                            );
+
+                            if (!context.mounted) return;
+
+                            Navigator.pop(context);
+
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text("Profile updated successfully"),
+                              ),
+                            );
+
+                            context.read<ProfileBloc>().add(
+                              FetchProfileEvent(),
+                            );
+                          } catch (e) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text(e.toString())),
+                            );
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF008C5E),
+                          minimumSize: const Size.fromHeight(52),
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                        child: const Text(
+                          "Save",
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ],
             ),
           ),
-
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-              },
-
-              child: const Text("Cancel"),
-            ),
-
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF0F5132),
-              ),
-
-              onPressed: () async {
-                final updatedProfile = ProfileModel(
-                  userId: profile.userId,
-
-                  age: int.tryParse(ageController.text) ?? 0,
-
-                  gender: genderController.text,
-
-                  weight: double.tryParse(weightController.text) ?? 0,
-
-                  height: double.tryParse(heightController.text) ?? 0,
-
-                  hba1c: double.tryParse(hba1cController.text) ?? 0,
-
-                  activityLevel: activityController.text,
-
-                  dietRestrictions: dietController.text,
-
-                  breakfastTime: profile.breakfastTime!.isEmpty
-                      ? null
-                      : profile.breakfastTime,
-                  lunchTime: profile.lunchTime!.isEmpty
-                      ? null
-                      : profile.lunchTime,
-                  dinnerTime: profile.dinnerTime!.isEmpty
-                      ? null
-                      : profile.dinnerTime,
-                );
-
-                try {
-                  await ProfileRepository().updateProfile(updatedProfile);
-
-                  Navigator.pop(context);
-
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text("Profile updated successfully"),
-                    ),
-                  );
-
-                  context.read<ProfileBloc>().add(FetchProfileEvent());
-                } catch (e) {
-                  ScaffoldMessenger.of(
-                    context,
-                  ).showSnackBar(SnackBar(content: Text(e.toString())));
-                }
-              },
-
-              child: const Text("Save", style: TextStyle(color: Colors.white)),
-            ),
-          ],
         );
       },
     );
@@ -224,18 +388,6 @@ class ProfileScreen extends StatelessWidget {
               ),
             ),
 
-            actions: [
-              IconButton(
-                icon: const Icon(
-                  Icons.notifications_none,
-                  color: Color(0xFF0F5132),
-                  size: 24,
-                ),
-                onPressed: () {},
-              ),
-              const SizedBox(width: 8),
-            ],
-
             bottom: PreferredSize(
               preferredSize: const Size.fromHeight(1),
               child: Container(color: const Color(0xFFE5E7EB), height: 1),
@@ -273,7 +425,6 @@ class ProfileScreen extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
 
                       children: [
-
                         const SizedBox(height: 14),
 
                         Container(
@@ -329,48 +480,48 @@ class ProfileScreen extends StatelessWidget {
                                           ),
                                         ),
 
-                                        GestureDetector(
-                                          onTap: () {
-                                            _showEditProfileDialog(
-                                              context,
-                                              profile,
-                                            );
-                                          },
-
-                                          child: Container(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 10,
-                                              vertical: 6,
-                                            ),
-
-                                            decoration: BoxDecoration(
-                                              color: const Color(0xFFE6F4EA),
-
-                                              borderRadius:
-                                                  BorderRadius.circular(10),
-                                            ),
-
-                                            child: const Row(
-                                              children: [
-                                                Icon(
-                                                  Icons.edit,
-                                                  size: 16,
-                                                  color: Color(0xFF0F5132),
-                                                ),
-
-                                                SizedBox(width: 4),
-
-                                                Text(
-                                                  "Edit",
-                                                  style: TextStyle(
-                                                    color: Color(0xFF0F5132),
-                                                    fontWeight: FontWeight.bold,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        ),
+                                        // GestureDetector(
+                                        //   onTap: () {
+                                        //     _showEditProfileDialog(
+                                        //       context,
+                                        //       profile,
+                                        //     );
+                                        //   },
+                                        //
+                                        //   child: Container(
+                                        //     padding: const EdgeInsets.symmetric(
+                                        //       horizontal: 10,
+                                        //       vertical: 6,
+                                        //     ),
+                                        //
+                                        //     decoration: BoxDecoration(
+                                        //       color: const Color(0xFFE6F4EA),
+                                        //
+                                        //       borderRadius:
+                                        //           BorderRadius.circular(10),
+                                        //     ),
+                                        //
+                                        //     child: const Row(
+                                        //       children: [
+                                        //         Icon(
+                                        //           Icons.edit,
+                                        //           size: 16,
+                                        //           color: Color(0xFF0F5132),
+                                        //         ),
+                                        //
+                                        //         SizedBox(width: 4),
+                                        //
+                                        //         Text(
+                                        //           "Edit",
+                                        //           style: TextStyle(
+                                        //             color: Color(0xFF0F5132),
+                                        //             fontWeight: FontWeight.bold,
+                                        //           ),
+                                        //         ),
+                                        //       ],
+                                        //     ),
+                                        //   ),
+                                        // ),
                                       ],
                                     ),
 

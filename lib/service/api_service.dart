@@ -1,7 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'package:adam/ui/screens/login_screen.dart';
+import 'package:adam/service/token_manager.dart';
+import 'package:adam/ui/screens/login/login_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -51,7 +52,6 @@ class ApiService {
     }
   }
 
-  // --- CHANGED: Now using _client.get instead of http.get ---
   Future<dynamic> get(String endpoint, {Map<String, String>? headers}) async {
     return _safeNetworkCall(
       () => _client.get(
@@ -77,7 +77,6 @@ class ApiService {
     );
   }
 
-  // --- CHANGED: Now using _client.put instead of http.put ---
   Future<dynamic> put(
     String endpoint,
     Map<String, dynamic> body, {
@@ -92,7 +91,6 @@ class ApiService {
     );
   }
 
-  // --- CHANGED: Now using _client.delete instead of http.delete ---
   Future<dynamic> delete(
     String endpoint, {
     Map<String, String>? headers,

@@ -1,9 +1,10 @@
 import 'package:adam/bloc/diet_recall/diet_recall_bloc.dart';
 import 'package:adam/data/repositories/diet_recall_repository.dart';
 import 'package:adam/data/repositories/plan_meal_repository.dart';
-import 'package:adam/ui/screens/log_meal_screen.dart';
-import 'package:adam/ui/shared_widgets/custom_snackbar.dart';
-import 'package:adam/ui/shared_widgets/shimmer.dart';
+import 'package:adam/ui/screens/log_meal/log_meal_screen.dart';
+import 'package:adam/ui/utils/custom_calendar.dart';
+import 'package:adam/ui/utils/custom_snackbar.dart';
+import 'package:adam/ui/utils/shimmer.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
@@ -21,128 +22,87 @@ class DietRecallScreenState extends State<DietRecallScreen> {
   final List<String> _mealPeriods = ['Breakfast', 'Lunch', 'Dinner', 'Snacks'];
   Map<String, String> _mealPlanIdsMap = {};
   bool _isLoading = true;
-  Map<String, List<String>> _mealRecipeCodesMap = {};
-  Map<String, List<String>> _mealQuantitiesMap = {};
-  List<dynamic> _allMeals = [];
+  final Map<String, List<String>> _mealQuantitiesMap = {};
+  DateTime selectedDate = DateTime.now();
+   String? planId;
 
   @override
   void initState() {
     super.initState();
-    _fetchPlanId();
+    _fetchPlanId(selectedDate);
   }
 
   // Future<void> _fetchPlanId() async {
-  //   // print("mealSlot ===== $mealSlot");
-  //   // if (currentPlanId == null) return;
-  //
-  //   final response = await mealPlanRepository.fetchMealPlan(
-  //     date: DateFormat('yyyy-MM-dd').format(DateTime.now()),
-  //   );
-  //   print("mealSlot ===== ${response.toString()}");
-  //
-  //   // setState(() {
-  //   //   mealReactions[mealSlot] = response;
-  //   // });
-  // }
-  // Future<void> _fetchPlanId() async {
-  //   print("DEBUG: _fetchPlanId started...");
   //   setState(() => _isLoading = true);
   //
   //   try {
   //     final String date = DateFormat('yyyy-MM-dd').format(DateTime.now());
-  //     print("DEBUG: Fetching plan for date: $date");
+  //     print("DEBUG: Fetching data for date: $date");
   //
   //     final response = await mealPlanRepository.fetchMealPlan(date: date);
-  //     print("DEBUG: API Response received: ${response?.length ?? 0} items");
   //
-  //     // Initialize/Reset maps
-  //     final Map<String, String> tempPlanIds = {};
-  //     final Map<String, List<String>> tempRecipeCodes = {};
-  //     final Map<String, List<String>> tempQuantities = {};
+  //     if (response == null) {
+  //     } else {
+  //       print("DEBUG: Repository returned ${response.length} items");
+  //     }
   //
-  //     if (response != null) {
+  //     if (response != null && response.isNotEmpty) {
+  //       print("response plan id ${response.first.planId}");
+  //       setState(() {});
+  //       print(
+  //         "DEBUG: _allMeals successfully updated with ${response.length} items.",
+  //       );
+  //
+  //       final Map<String, String> tempPlanIds = {};
   //       for (var meal in response) {
   //         final slot = meal.mealType.trim().toLowerCase();
-  //         final uuid = meal.planId;
-  //         final code = meal.recipeCode.toString();
-  //         // Assuming your model has a quantity field, e.g., meal.quantity
-  //         final qty = meal.quantity.toString();
-  //
-  //         print(
-  //           "DEBUG: Processing - Type: $slot, ID: $uuid, Code: $code, Qty: $qty",
-  //         );
-  //
-  //         // 1. Map Plan ID (Single String)
-  //         if (slot.isNotEmpty && uuid.isNotEmpty) {
-  //           tempPlanIds[slot] = uuid;
+  //         if (slot.isNotEmpty && meal.planId.isNotEmpty) {
+  //           tempPlanIds[slot] = meal.planId;
   //         }
-  //
-  //         // 2. Map Recipe Codes (List)
-  //         tempRecipeCodes[slot] ??= [];
-  //         tempRecipeCodes[slot]!.add(code);
-  //
-  //         // 3. Map Quantities (List)
-  //         tempQuantities[slot] ??= [];
-  //         tempQuantities[slot]!.add(qty);
   //       }
-  //     }
   //
-  //     if (mounted) {
   //       setState(() {
   //         _mealPlanIdsMap = tempPlanIds;
-  //         _mealRecipeCodesMap = tempRecipeCodes;
-  //         _mealQuantitiesMap = tempQuantities;
-  //         _isLoading = false;
   //       });
-  //       print("DEBUG: Maps updated successfully.");
   //     }
+  //
+  //     setState(() => _isLoading = false);
   //   } catch (e) {
-  //     if (mounted) setState(() => _isLoading = false);
-  //     print("DEBUG: Error fetching plan: $e");
+  //     setState(() => _isLoading = false);
+  //     print("DEBUG: Error in _fetchPlanId: $e");
   //   }
   // }
-  Future<void> _fetchPlanId() async {
+  Future<void> _fetchPlanId(DateTime selectedDate) async {
     setState(() => _isLoading = true);
 
     try {
-      final String date = DateFormat('yyyy-MM-dd').format(DateTime.now());
-      print("DEBUG: Fetching data for date: $date");
+      final String date = DateFormat('yyyy-MM-dd').format(selectedDate);
 
       final response = await mealPlanRepository.fetchMealPlan(date: date);
 
-      // Check if response itself is null or empty
-      if (response == null) {
-        print("DEBUG: Repository returned NULL");
-      } else {
-        print("DEBUG: Repository returned ${response.length} items");
-      }
+      final Map<String, String> tempPlanIds = {};
 
-      if (response != null && response.isNotEmpty) {
-        setState(() {
-          _allMeals = response; // Assigning the actual list
-        });
-        print("DEBUG: _allMeals successfully updated with ${response.length} items.");
-
-        // Now build your maps
-        final Map<String, String> tempPlanIds = {};
+      if (response != null) {
         for (var meal in response) {
           final slot = meal.mealType.trim().toLowerCase();
+
           if (slot.isNotEmpty && meal.planId.isNotEmpty) {
             tempPlanIds[slot] = meal.planId;
           }
         }
-
-        setState(() {
-          _mealPlanIdsMap = tempPlanIds;
-        });
       }
 
-      setState(() => _isLoading = false);
+      setState(() {
+        _mealPlanIdsMap = tempPlanIds;
+        _isLoading = false;
+        planId = response[0].planId;
+        print("this is coming from call ${planId}");
+      });
     } catch (e) {
       setState(() => _isLoading = false);
-      print("DEBUG: Error in _fetchPlanId: $e");
     }
   }
+
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
@@ -163,16 +123,12 @@ class DietRecallScreenState extends State<DietRecallScreen> {
               message: state.message,
               type: SnackBarType.error,
             );
-            //   ScaffoldMessenger.of(
-            //     context,
-            //   ).showSnackBar(SnackBar(content: Text(state.message)));
           }
         },
 
         child: Scaffold(
           backgroundColor: const Color(0xFFF7F7F7),
 
-          // ================= APP BAR =================
           appBar: AppBar(
             backgroundColor: Colors.white,
             centerTitle: true,
@@ -187,7 +143,6 @@ class DietRecallScreenState extends State<DietRecallScreen> {
             ),
           ),
 
-          // ================= BODY =================
           body: _isLoading
               ? Shimmer.list()
               : Column(
@@ -201,9 +156,18 @@ class DietRecallScreenState extends State<DietRecallScreen> {
 
                         child: Column(
                           children: [
+                            CustomCalendar(
+                              initialDate: selectedDate,
+                              onDateSelected: (date) {
+                                setState(() {
+                                  selectedDate = date;
+                                });
+
+                                _fetchPlanId(date);
+                              },
+                            ),
                             const SizedBox(height: 20),
 
-                            // ================= MEAL TAB =================
                             Container(
                               height: 42,
                               padding: const EdgeInsets.all(3),
@@ -267,7 +231,6 @@ class DietRecallScreenState extends State<DietRecallScreen> {
 
                             const SizedBox(height: 30),
 
-                            /// QUESTION
                             const Text(
                               'Did you eat as planned?',
                               style: TextStyle(
@@ -278,135 +241,129 @@ class DietRecallScreenState extends State<DietRecallScreen> {
                             ),
 
                             const SizedBox(height: 16),
-
+                            _buildOptionCard(
+                              emoji: '✅',
+                              text: 'Yes, I ate as planned',
+                              onTap: () {
+                                // final String? planId =
+                                //     _mealPlanIdsMap[_selectedMealPeriod
+                                //         .toLowerCase()];
+                                print("my plan id $planId");
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => LogMealScreen(
+                                      tab: true,
+                                      planId: planId,
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
                             // BlocBuilder<DietRecallBloc, DietRecallState>(
                             //   builder: (context, state) {
                             //     return _buildOptionCard(
                             //       emoji: state is DietRecallLoading ? '⏳' : '✅',
-                            //
                             //       text: state is DietRecallLoading
                             //           ? 'Logging meal...'
                             //           : 'Yes, I ate as planned',
-                            //
                             //       onTap: state is DietRecallLoading
                             //           ? () {}
                             //           : () {
+                            //               print(
+                            //                 "DEBUG: Selected period: '${_selectedMealPeriod.toLowerCase()}'",
+                            //               );
+                            //               print(
+                            //                 "DEBUG: Total meals in _allMeals: ${_allMeals.length}",
+                            //               );
+                            //
+                            //               // Print each meal type found in the list
+                            //               for (var m in _allMeals) {
+                            //                 print(
+                            //                   "DEBUG: Available meal type in data: '${m.mealType.trim().toLowerCase()}'",
+                            //                 );
+                            //               }
+                            //
+                            //               final List<dynamic> currentSlotMeals =
+                            //                   _allMeals.where((meal) {
+                            //                     final dataSlot = meal.mealType
+                            //                         .trim()
+                            //                         .toLowerCase();
+                            //                     final selectedSlot =
+                            //                         _selectedMealPeriod
+                            //                             .trim()
+                            //                             .toLowerCase();
+                            //                     return dataSlot == selectedSlot;
+                            //                   }).toList();
+                            //
+                            //               print(
+                            //                 "DEBUG: Meals found for this slot: ${currentSlotMeals.length}",
+                            //               );
+                            //
+                            //               // 2. Lookup the planId from your map
+                            //               final String? planId =
+                            //                   _mealPlanIdsMap[_selectedMealPeriod
+                            //                       .toLowerCase()];
+                            //
+                            //               // 3. Extract the lists from the filtered items
+                            //               final List<String> codes =
+                            //                   currentSlotMeals
+                            //                       .map(
+                            //                         (m) =>
+                            //                             m.recipeCode.toString(),
+                            //                       )
+                            //                       .toList();
+                            //               final List<String> quantities =
+                            //                   currentSlotMeals
+                            //                       .map(
+                            //                         (m) =>
+                            //                             m.quantity.toString(),
+                            //                       )
+                            //                       .toList();
+                            //
+                            //               // 4. Validation
+                            //               if (planId == null ||
+                            //                   currentSlotMeals.isEmpty) {
+                            //                 ScaffoldMessenger.of(
+                            //                   context,
+                            //                 ).showSnackBar(
+                            //                   const SnackBar(
+                            //                     content: Text(
+                            //                       "No meal plan found for this time.",
+                            //                     ),
+                            //                   ),
+                            //                 );
+                            //                 return;
+                            //               }
+                            //
+                            //               // 5. Dispatch
                             //               context.read<DietRecallBloc>().add(
                             //                 SubmitDietRecallEvent(
                             //                   mealSlot: _selectedMealPeriod,
-                            //                   planId: "abc",
+                            //                   planId: planId,
                             //                   didEatAsPlanned: true,
+                            //                   recipeCodes: codes,
+                            //                   // Use the variable created in step 3
+                            //                   quantities:
+                            //                       quantities, // Use the variable created in step 3
                             //                 ),
                             //               );
                             //             },
                             //     );
                             //   },
                             // ),
-                            BlocBuilder<DietRecallBloc, DietRecallState>(
-                              builder: (context, state) {
-                                return _buildOptionCard(
-                                  emoji: state is DietRecallLoading ? '⏳' : '✅',
-                                  text: state is DietRecallLoading
-                                      ? 'Logging meal...'
-                                      : 'Yes, I ate as planned',
-                                  onTap: state is DietRecallLoading
-                                      ? () {}
-                                      : () {
-                                          print(
-                                            "DEBUG: Selected period: '${_selectedMealPeriod.toLowerCase()}'",
-                                          );
-                                          print(
-                                            "DEBUG: Total meals in _allMeals: ${_allMeals.length}",
-                                          );
-
-                                          // Print each meal type found in the list
-                                          for (var m in _allMeals) {
-                                            print(
-                                              "DEBUG: Available meal type in data: '${m.mealType.trim().toLowerCase()}'",
-                                            );
-                                          }
-
-                                          final List<dynamic> currentSlotMeals =
-                                              _allMeals.where((meal) {
-                                                final dataSlot = meal.mealType
-                                                    .trim()
-                                                    .toLowerCase();
-                                                final selectedSlot =
-                                                    _selectedMealPeriod
-                                                        .trim()
-                                                        .toLowerCase();
-                                                return dataSlot == selectedSlot;
-                                              }).toList();
-
-                                          print(
-                                            "DEBUG: Meals found for this slot: ${currentSlotMeals.length}",
-                                          );
-
-                                          // 2. Lookup the planId from your map
-                                          final String? planId =
-                                              _mealPlanIdsMap[_selectedMealPeriod
-                                                  .toLowerCase()];
-
-                                          // 3. Extract the lists from the filtered items
-                                          final List<String> codes =
-                                              currentSlotMeals
-                                                  .map(
-                                                    (m) =>
-                                                        m.recipeCode.toString(),
-                                                  )
-                                                  .toList();
-                                          final List<String> quantities =
-                                              currentSlotMeals
-                                                  .map(
-                                                    (m) =>
-                                                        m.quantity.toString(),
-                                                  )
-                                                  .toList();
-
-                                          // 4. Validation
-                                          if (planId == null ||
-                                              currentSlotMeals.isEmpty) {
-                                            ScaffoldMessenger.of(
-                                              context,
-                                            ).showSnackBar(
-                                              const SnackBar(
-                                                content: Text(
-                                                  "No meal plan found for this time.",
-                                                ),
-                                              ),
-                                            );
-                                            return;
-                                          }
-
-                                          // 5. Dispatch
-                                          context.read<DietRecallBloc>().add(
-                                            SubmitDietRecallEvent(
-                                              mealSlot: _selectedMealPeriod,
-                                              planId: planId,
-                                              didEatAsPlanned: true,
-                                              recipeCodes: codes,
-                                              // Use the variable created in step 3
-                                              quantities:
-                                                  quantities, // Use the variable created in step 3
-                                            ),
-                                          );
-                                        },
-                                );
-                              },
-                            ),
                             const SizedBox(height: 14),
 
                             _buildOptionCard(
                               emoji: '✏️',
                               text: 'No, I changed something',
                               onTap: () {
-                                final String? planId = _mealPlanIdsMap[_selectedMealPeriod.toLowerCase()];
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
                                     builder: (context) => LogMealScreen(
                                       tab: true,
-                                      planId: planId, // Pass it here
+                                      planId: planId,
                                     ),
                                   ),
                                 );
@@ -441,15 +398,11 @@ class DietRecallScreenState extends State<DietRecallScreen> {
                                               ),
                                             );
                                           } else {
-                                            // Optional: Handle the case where no plan exists
-                                            ScaffoldMessenger.of(
+                                            AppSnackBar.show(
                                               context,
-                                            ).showSnackBar(
-                                              const SnackBar(
-                                                content: Text(
+                                              message:
                                                   "No meal plan found to skip.",
-                                                ),
-                                              ),
+                                              type: SnackBarType.error,
                                             );
                                           }
                                         },

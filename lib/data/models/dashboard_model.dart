@@ -3,23 +3,24 @@ class DashboardModel {
   final double? bloodSugarControlScore;
   final NutritionModel nutrition;
   final String message;
+  final double? glycemicLoad;
 
   DashboardModel({
     required this.date,
     required this.bloodSugarControlScore,
     required this.nutrition,
     required this.message,
+    required this.glycemicLoad,
   });
 
   factory DashboardModel.fromJson(Map<String, dynamic> json) {
     return DashboardModel(
       date: json['date'] ?? '',
-      bloodSugarControlScore:
-      (json['blood_sugar_control_score'] as num?)?.toDouble(),
-      nutrition: NutritionModel.fromJson(
-        json['nutrition'] ?? {},
-      ),
+      bloodSugarControlScore: (json['blood_sugar_control_score'] as num?)
+          ?.toDouble(),
+      nutrition: NutritionModel.fromJson(json['nutrition'] ?? {}),
       message: json['message'] ?? '',
+      glycemicLoad: json['gl_per_day'],
     );
   }
 }

@@ -2,7 +2,6 @@ import 'package:adam/data/models/plan_meal_model.dart';
 import 'package:adam/data/repositories/plan_meal_repository.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-/// EVENTS
 
 abstract class MealPlanEvent {}
 

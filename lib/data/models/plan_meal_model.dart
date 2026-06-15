@@ -12,6 +12,7 @@ class MealPlanModel {
   final String? recipeCode;
   final String? reaction;
   final String? comboReaction;
+  final double? glValue;
 
   MealPlanModel({
     required this.pkey,
@@ -27,6 +28,7 @@ class MealPlanModel {
     this.recipeCode,
     required this.reaction,
     required this.comboReaction,
+    required this.glValue,
   });
 
   factory MealPlanModel.fromJson(Map<String, dynamic> json) {
@@ -44,7 +46,27 @@ class MealPlanModel {
       recipeCode: json['Food_Name_desc'] ?? "",
       reaction: (json['Reaction'] ?? ''),
       comboReaction: (json["Combo_Reaction"] ?? ""),
+      glValue: (json['GL'] ?? ''),
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'Pkey': pkey,
+      'user_id': userId,
+      'WeekNo': weekNo,
+      'Date': date,
+      'Timings': mealType,
+      'Food_Name': foodName,
+      'Food_Qty': quantity,
+      'R_desc': quantityUnit,
+      'Energy_kcal': calories,
+      'plan_id': planId,
+      'Food_Name_desc': recipeCode,
+      'Reaction': reaction,
+      'Combo_Reaction': comboReaction,
+      'GL': glValue,
+    };
   }
 
   String get imageUrl {

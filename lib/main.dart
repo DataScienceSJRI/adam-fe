@@ -1,8 +1,8 @@
 import 'package:adam/service/navigation_service.dart';
 import 'package:adam/service/notification_service.dart';
-import 'package:adam/ui/screens/dashboard_wrapper.dart';
-import 'package:adam/ui/screens/login_screen.dart';
-import 'package:adam/ui/shared_widgets/shimmer.dart';
+import 'package:adam/ui/screens/dashboard/dashboard_wrapper.dart';
+import 'package:adam/ui/screens/login/login_screen.dart';
+import 'package:adam/ui/utils/shimmer.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -50,9 +50,7 @@ class MyApp extends StatelessWidget {
 
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return  Scaffold(
-              body: Center(child: Shimmer.card()),
-            );
+            return Scaffold(body: Center(child: Shimmer.card()));
           }
 
           if (snapshot.data == true) {
