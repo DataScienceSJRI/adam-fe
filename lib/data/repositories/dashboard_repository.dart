@@ -12,24 +12,24 @@ class DashboardRepository {
     final prefs = await SharedPreferences.getInstance();
 
     final token = prefs.getString('access_token');
+    final TokenManager tokenManager = TokenManager();
 
-    final String todayDate =
-    DateFormat('yyyy-MM-dd').format(DateTime.now());
+    final String todayDate = DateFormat('yyyy-MM-dd').format(DateTime.now());
 
     print(
-      "Fetching dashboard data for date: $todayDate with token: $token",
+      "Fetching dashboard data for date: $todayDate with token: ${await tokenManager.getValidAccessToken()}",
     );
 
     print(
       "API Endpoint: "
-          "${ApiEndpoints.getDashboardDetails}?plan_date=$todayDate",
+      "${ApiEndpoints.getDashboardDetails}?plan_date=$todayDate",
     );
 
     try {
       final response = await _apiService.get(
         "${ApiEndpoints.getDashboardDetails}?plan_date=$todayDate",
         headers: {
-          'Authorization': 'Bearer $token',
+          'Authorization': 'Bearer ${await tokenManager.getValidAccessToken()}',
           'accept': 'application/json',
         },
       );

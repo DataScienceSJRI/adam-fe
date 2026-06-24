@@ -4,11 +4,13 @@ import 'dart:io';
 import 'package:adam/core/constants/api_endpoints.dart';
 import 'package:adam/data/models/plan_meal_model.dart';
 import 'package:adam/service/api_service.dart';
+import 'package:adam/service/token_manager.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class MealPlanRepository {
   final ApiService _apiService = ApiService();
+  final TokenManager tokenManager = TokenManager();
 
   MealPlanRepository();
 
@@ -42,13 +44,13 @@ class MealPlanRepository {
   //     // throw Exception("Failed to fetch meal plan: $e");
   //   }
   // }
-  Future<List<MealPlanModel>> fetchMealPlan({required String date}) async {
+  Future<List<MealPlanModel>> fetchMealPlan({required String date, bool forceRefresh = false,}) async {
     try {
       final prefs = await SharedPreferences.getInstance();
 
       final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
 
-      if (date == today) {
+      if (date == today && !forceRefresh) {
         final savedDate = prefs.getString('meal_plan_date');
         final cachedData = prefs.getString('meal_plan_data');
 
@@ -63,7 +65,8 @@ class MealPlanRepository {
 
       print("🌐 FETCHING MEAL PLAN FROM API");
 
-      final token = prefs.getString('access_token');
+      // final token = prefs.getString('access_token');
+      final token = await tokenManager.getValidAccessToken();
 
       final response = await _apiService.get(
         "${ApiEndpoints.getPlanDaily}?plan_date=$date",
@@ -117,9 +120,10 @@ class MealPlanRepository {
     try {
       print("========== FETCH REPLACEMENT ==========");
 
-      final prefs = await SharedPreferences.getInstance();
+      // final prefs = await SharedPreferences.getInstance();
 
-      final token = prefs.getString('access_token');
+      // final token = prefs.getString('access_token');
+      final token = await tokenManager.getValidAccessToken();
 
       print("🔑 TOKEN ===== $token");
 
@@ -159,9 +163,10 @@ class MealPlanRepository {
     required List<String> orignalRecipeCodes,
   }) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-
-      final token = prefs.getString('access_token');
+      // final prefs = await SharedPreferences.getInstance();
+      //
+      // final token = prefs.getString('access_token');
+      final token = await tokenManager.getValidAccessToken();
 
       final body = {
         "date": date,
@@ -202,9 +207,10 @@ class MealPlanRepository {
     try {
       print("========== SEND MEAL REACTION ==========");
 
-      final prefs = await SharedPreferences.getInstance();
-
-      final token = prefs.getString('access_token');
+      // final prefs = await SharedPreferences.getInstance();
+      //
+      // final token = prefs.getString('access_token');
+      final token = await tokenManager.getValidAccessToken();
 
       print("🔑 TOKEN ===== $token");
 
@@ -248,9 +254,10 @@ class MealPlanRepository {
     try {
       print("========== SEND MEAL REACTION ==========");
 
-      final prefs = await SharedPreferences.getInstance();
-
-      final token = prefs.getString('access_token');
+      // final prefs = await SharedPreferences.getInstance();
+      //
+      // final token = prefs.getString('access_token');
+      final token = await tokenManager.getValidAccessToken();
 
       print("🔑 TOKEN ===== $token");
 
@@ -292,9 +299,10 @@ class MealPlanRepository {
     try {
       print("========== GET MEAL REACTION ==========");
 
-      final prefs = await SharedPreferences.getInstance();
-
-      final token = prefs.getString('access_token');
+      // final prefs = await SharedPreferences.getInstance();
+      //
+      // final token = prefs.getString('access_token');
+      final token = await tokenManager.getValidAccessToken();
 
       print("🔑 TOKEN ===== $token");
 

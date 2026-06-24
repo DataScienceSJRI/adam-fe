@@ -1,7 +1,11 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:adam/core/constants/api_endpoints.dart';
+import 'package:adam/data/models/plan_meal_model.dart';
 import 'package:adam/service/api_service.dart';
+import 'package:adam/service/token_manager.dart';
+import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:path/path.dart' as p;
@@ -9,6 +13,8 @@ import 'package:path/path.dart' as p;
 class DietRecallRepository {
   final ApiService _apiService = ApiService();
   final supabase = Supabase.instance.client;
+
+  final TokenManager tokenManager = TokenManager();
 
   Future<void> logDietRecall({
     required String mealSlot,
@@ -18,9 +24,10 @@ class DietRecallRepository {
     required List<String> quantities,
   }) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-
-      final token = prefs.getString('access_token');
+      // final prefs = await SharedPreferences.getInstance();
+      //
+      // final token = prefs.getString('access_token');
+      final token = await tokenManager.getValidAccessToken();
 
       if (token == null || token.isEmpty) {
         throw Exception("Access token missing");
@@ -44,7 +51,7 @@ class DietRecallRepository {
           "meal_slot": mealSlot.toLowerCase(),
           "plan_id": planId,
           "recipe_codes": recipeCodes,
-          "actual_quantities":quantities
+          "actual_quantities": quantities,
         },
 
         headers: {
@@ -68,12 +75,13 @@ class DietRecallRepository {
     required String planId,
     required bool didEatAsPlanned,
     required String date,
-    required String unit
+    String? unit,
   }) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-
-      final token = prefs.getString('access_token');
+      // final prefs = await SharedPreferences.getInstance();
+      //
+      // final token = prefs.getString('access_token');
+      final token = await tokenManager.getValidAccessToken();
 
       if (token == null || token.isEmpty) {
         throw Exception("Access token missing");
@@ -87,13 +95,13 @@ class DietRecallRepository {
       print("📡 DIET RECALL API ===== ${ApiEndpoints.postDietRecall}");
 
       final body = {
-        "recipe_code": recipeCode,
+        "recipe_codes": [recipeCode],
         "date": date,
         "did_eat_as_planned": didEatAsPlanned,
         "meal_slot": mealSlot.toLowerCase(),
-        "quantity": quantity,
+        "actual_quantities": [quantity],
         "plan_id": planId,
-        "unit":unit
+        "unit": unit,
       };
 
       print("📦 REQUEST BODY ===== $body");
@@ -147,9 +155,10 @@ class DietRecallRepository {
     required String planId,
   }) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-
-      final token = prefs.getString('access_token');
+      // final prefs = await SharedPreferences.getInstance();
+      //
+      // final token = prefs.getString('access_token');
+      final token = await tokenManager.getValidAccessToken();
 
       if (token == null || token.isEmpty) {
         throw Exception("Access token missing");
@@ -193,8 +202,9 @@ class DietRecallRepository {
     required String date,
   }) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('access_token');
+      // final prefs = await SharedPreferences.getInstance();
+      // final token = prefs.getString('access_token');
+      final token = await tokenManager.getValidAccessToken();
 
       if (token == null || token.isEmpty) {
         throw Exception("Access token missing");
@@ -230,8 +240,9 @@ class DietRecallRepository {
 
   Future<Map<String, dynamic>> getRecall({required String date}) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final accessToken = prefs.getString('access_token');
+      // final prefs = await SharedPreferences.getInstance();
+      // final accessToken = prefs.getString('access_token');
+      final accessToken = await tokenManager.getValidAccessToken();
 
       if (accessToken == null || accessToken.isEmpty) {
         throw Exception("Access token missing. Please login again.");
@@ -248,6 +259,121 @@ class DietRecallRepository {
       return response;
     } catch (e) {
       throw Exception("Failed to fetch recall: $e");
+    }
+  }
+
+  Future<List<MealPlanModel>> fetchMealPlan({required String date}) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+
+      final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+
+      if (date == today) {
+        final savedDate = prefs.getString('meal_plan_date');
+        final cachedData = prefs.getString('meal_plan_data');
+
+        if (savedDate == today && cachedData != null) {
+          print("📦 LOADING MEAL PLAN FROM CACHE");
+
+          final List decoded = jsonDecode(cachedData);
+
+          return decoded.map((e) => MealPlanModel.fromJson(e)).toList();
+        }
+      }
+
+      print("🌐 FETCHING MEAL PLAN FROM API");
+
+      // final token = prefs.getString('access_token');
+      final token = await tokenManager.getValidAccessToken();
+
+      final response = await _apiService.get(
+        "${ApiEndpoints.getPlanDaily}?plan_date=$date",
+        headers: {
+          'accept': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      final List plans = response['meals'] ?? response;
+
+      final meals = plans.map((e) => MealPlanModel.fromJson(e)).toList();
+
+      if (date == today) {
+        await prefs.setString('meal_plan_date', today);
+
+        await prefs.setString(
+          'meal_plan_data',
+          jsonEncode(meals.map((e) => e.toJson()).toList()),
+        );
+
+        print("💾 TODAY'S MEAL PLAN SAVED");
+      }
+
+      return meals;
+    } catch (e) {
+      print("❌ ERROR ===== $e");
+      throw const HttpException('The connection timed out. Please try again.');
+    }
+  }
+
+  Future<dynamic> deleteRecall({
+    required String recallId,
+  }) async {
+    try {
+      final token = await tokenManager.getValidAccessToken();
+
+      final response = await _apiService.delete(
+        "${ApiEndpoints.editRecall}/$recallId",
+        headers: {
+          'Authorization': 'Bearer $token',
+          'accept': 'application/json',
+        },
+      );
+
+      print("✅ DELETE RECALL RESPONSE => $response");
+
+      return response;
+    } catch (e) {
+      print("❌ DELETE RECALL ERROR => $e");
+      rethrow;
+    }
+  }
+  Future<void> editRecall({
+    required String recallId,
+    required String mealSlot,
+    required bool didEatAsPlanned,
+    required String quantity,
+    String?recipeCode,
+    required String foodName,
+
+  }) async {
+    final body = {
+      "food_qty": quantity,
+      "did_eat_as_planned": didEatAsPlanned,
+      "meal_slot": mealSlot.toLowerCase(),
+      "recipe_code": recipeCode,
+      "food_name": foodName,
+    };
+    try {
+      final token = await tokenManager.getValidAccessToken();
+
+      if (token == null || token.isEmpty) {
+        throw Exception("Access token missing");
+      }
+
+      final response = await _apiService.put(
+        "${ApiEndpoints.editRecall}/$recallId",
+        body,
+        headers: {
+          'Authorization': 'Bearer $token',
+          'accept': 'application/json',
+        },
+      );
+
+      print("✅ DELETE RECALL RESPONSE => $response");
+    } catch (e) {
+      print("❌ DELETE RECALL ERROR => $e");
+      rethrow;
     }
   }
 }

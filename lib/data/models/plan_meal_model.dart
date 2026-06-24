@@ -46,7 +46,9 @@ class MealPlanModel {
       recipeCode: json['Food_Name_desc'] ?? "",
       reaction: (json['Reaction'] ?? ''),
       comboReaction: (json["Combo_Reaction"] ?? ""),
-      glValue: (json['GL'] ?? ''),
+      glValue: json['GL'] == null
+          ? null
+          : double.tryParse(json['GL'].toString()),
     );
   }
 

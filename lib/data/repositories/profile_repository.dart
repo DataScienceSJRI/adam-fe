@@ -1,6 +1,7 @@
 import 'package:adam/core/constants/api_endpoints.dart';
 import 'package:adam/data/models/profile_model.dart';
 import 'package:adam/service/api_service.dart';
+import 'package:adam/service/token_manager.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ProfileRepository {
@@ -12,9 +13,13 @@ class ProfileRepository {
     final prefs = await SharedPreferences.getInstance();
 
     final token = prefs.getString('access_token');
+    final TokenManager tokenManager = TokenManager();
     final response = await _api.get(
       ApiEndpoints.getProfile,
-      headers: {'Authorization': 'Bearer $token', 'accept': 'application/json'},
+      headers: {
+        'Authorization': 'Bearer ${await tokenManager.getValidAccessToken()}',
+        'accept': 'application/json',
+      },
     );
 
     return ProfileModel.fromJson(response);
@@ -38,15 +43,12 @@ class ProfileRepository {
       "dinner_time": profile.dinnerTime,
     };
 
-    final response = await _api.put(ApiEndpoints.getProfile, body,headers: {
-      'Authorization':
-      'Bearer $token',
-      'accept':
-      'application/json',
-    },);
-    print(
-      "✅ PUT Profile ===== $response",
+    final response = await _api.put(
+      ApiEndpoints.getProfile,
+      body,
+      headers: {'Authorization': 'Bearer $token', 'accept': 'application/json'},
     );
+    print("✅ PUT Profile ===== $response");
 
     return true;
   }

@@ -24,5 +24,12 @@ class ApiEndpoints {
   static const String postReplacement = 'v1/plan/replacements/request';
   static const String reaction = 'v1/plan/reaction';
   static const String reactionRecipe = 'v1/plan/reaction/recipe';
-  static const String editRecipe = "v1/recall";
+  static const String editRecall = "v1/recall";
+  static const String DOMAIN = 'https://datatools.sjri.res.in';
+  static const String preferenceOnboardingImage =
+      "$DOMAIN/static/VD/subcategories_sd/Subcategories/";
+  static const String preferencesApi = "v1/preferences";
+  static const String getWeightLogsApi = "v1/weight/logs";
+  static const String postWeightLogsApi = "v1/weight/log";
+
 }

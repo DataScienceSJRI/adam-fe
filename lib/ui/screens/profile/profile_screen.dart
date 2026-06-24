@@ -4,6 +4,7 @@ import 'package:adam/data/models/profile_model.dart';
 import 'package:adam/data/repositories/logout_repository.dart';
 import 'package:adam/data/repositories/profile_repository.dart';
 import 'package:adam/ui/screens/login/login_screen.dart';
+import 'package:adam/ui/screens/weight_log/weight_log_screen.dart';
 import 'package:adam/ui/utils/shimmer.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -675,6 +676,43 @@ class ProfileScreen extends StatelessWidget {
                                   profile.dietRestrictions,
                                   style: const TextStyle(
                                     fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.all(16.0),
+                                child: SizedBox(
+                                  width: double.infinity,
+                                  height: 52,
+                                  child: ElevatedButton(
+                                    onPressed: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(builder: (context) => WeightLogScreen()),
+                                      );
+                                    },
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: const Color(0xFF008C5E),
+                                      elevation: 0,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(14),
+                                      ),
+                                    ),
+                                    child: const Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(Icons.monitor_weight_outlined, color: Colors.white, size: 20),
+                                        SizedBox(width: 8),
+                                        Text(
+                                          "Log Weight",
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 16,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 ),
                               ),

@@ -30,12 +30,14 @@ class ActivityHistoryModel {
   final int durationMin;
   final String intensity;
   final String date;
+  final String id;
 
   ActivityHistoryModel({
     required this.paName,
     required this.durationMin,
     required this.intensity,
     required this.date,
+    required this.id,
   });
 
   factory ActivityHistoryModel.fromJson(Map<String, dynamic> json) {
@@ -44,6 +46,7 @@ class ActivityHistoryModel {
       durationMin: json['duration_min'] ?? 0,
       intensity: json['intensity'] ?? '',
       date: json['date'] ?? '',
+      id: json['id'] ?? '',
     );
   }
 }

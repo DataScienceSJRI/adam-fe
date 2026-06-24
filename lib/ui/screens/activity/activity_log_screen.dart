@@ -1,4 +1,5 @@
 import 'package:adam/ui/utils/custom_calendar.dart';
+import 'package:adam/ui/utils/custom_snackbar.dart';
 import 'package:adam/ui/utils/shimmer.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -33,11 +34,11 @@ class _ActivityLogViewState extends State<_ActivityLogView> {
   String _selectedActivity = '';
   List<String> _activities = [];
   bool _isLoadingActivities = true;
-
+  final TextEditingController _searchController = TextEditingController();
+  List<String> _filteredActivities = [];
   double _duration = 30.0;
   String _intensity = 'Moderate';
 
-  /// LIST FROM API ONLY
   List<ActivityHistoryModel> _loggedActivities = [];
   bool _isLoadingLogs = true;
   DateTime selectedDate = DateTime.now();
@@ -45,12 +46,16 @@ class _ActivityLogViewState extends State<_ActivityLogView> {
   @override
   void initState() {
     super.initState();
-
     _loadActivities();
     _loadLoggedActivities(selectedDate);
   }
 
-  /// FETCH ACTIVITIES LIST
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
   Future<void> _loadActivities() async {
     try {
       final activities = await _repository.fetchPhysicalActivities();
@@ -59,11 +64,10 @@ class _ActivityLogViewState extends State<_ActivityLogView> {
 
       setState(() {
         _activities = activities;
-
+        _filteredActivities = activities;
         if (activities.isNotEmpty) {
           _selectedActivity = activities.first;
         }
-
         _isLoadingActivities = false;
       });
     } catch (e) {
@@ -72,14 +76,26 @@ class _ActivityLogViewState extends State<_ActivityLogView> {
       setState(() {
         _isLoadingActivities = false;
       });
-
-      ScaffoldMessenger.of(
+      AppSnackBar.show(
         context,
-      ).showSnackBar(SnackBar(content: Text(e.toString())));
+        message: e.toString(),
+        type: SnackBarType.error,
+      );
     }
   }
 
-  /// ✅ FIX: FETCH TODAY LOGGED ACTIVITIES FROM API
+  void _filterActivities(String query) {
+    setState(() {
+      if (query.trim().isEmpty) {
+        _filteredActivities = _activities;
+      } else {
+        _filteredActivities = _activities.where((activity) {
+          return activity.toLowerCase().contains(query.toLowerCase());
+        }).toList();
+      }
+    });
+  }
+
   Future<void> _loadLoggedActivities(DateTime date) async {
     try {
       final data = await _repository.fetchTodayActivities(date);
@@ -96,19 +112,22 @@ class _ActivityLogViewState extends State<_ActivityLogView> {
       setState(() {
         _isLoadingLogs = false;
       });
-
-      ScaffoldMessenger.of(
+      AppSnackBar.show(
         context,
-      ).showSnackBar(SnackBar(content: Text(e.toString())));
+        message: e.toString(),
+        type: SnackBarType.error,
+      );
     }
   }
 
-  /// SAVE ACTIVITY
   Future<void> _saveActivity() async {
     if (_selectedActivity.isEmpty) {
-      ScaffoldMessenger.of(
+      AppSnackBar.show(
         context,
-      ).showSnackBar(const SnackBar(content: Text('Please select activity')));
+        message: 'Please select activity',
+        type: SnackBarType.error,
+      );
+
       return;
     }
 
@@ -116,28 +135,28 @@ class _ActivityLogViewState extends State<_ActivityLogView> {
       durationMin: _duration.toInt(),
       intensity: _intensity,
       paName: _selectedActivity,
-      // timeOfDay: "Morning",
-      date: DateFormat('yyyy-MM-dd').format(selectedDate)
+      date: DateFormat('yyyy-MM-dd').format(selectedDate),
     );
 
     try {
-      /// POST TO BACKEND
       await _repository.logActivity(model);
 
-      /// 🔥 IMPORTANT: ALWAYS REFRESH FROM API (NO LOCAL INSERT)
       final updated = await _repository.fetchTodayActivities(selectedDate);
 
       setState(() {
         _loggedActivities = updated;
       });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Activity Saved Successfully')),
+      AppSnackBar.show(
+        context,
+        message: 'Activity Saved Successfully',
+        type: SnackBarType.success,
       );
     } catch (e) {
-      ScaffoldMessenger.of(
+      AppSnackBar.show(
         context,
-      ).showSnackBar(SnackBar(content: Text(e.toString())));
+        message: e.toString(),
+        type: SnackBarType.error,
+      );
     }
   }
 
@@ -174,7 +193,7 @@ class _ActivityLogViewState extends State<_ActivityLogView> {
                   selectedDate = date;
                 });
 
-                _loadLoggedActivities(date);
+                _loadLoggedActivities(selectedDate);
               },
             ),
             const SizedBox(height: 10),
@@ -189,16 +208,16 @@ class _ActivityLogViewState extends State<_ActivityLogView> {
             ),
 
             const SizedBox(height: 10),
-
-            /// SEARCH FIELD (UNCHANGED UI)
             Container(
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(color: const Color(0xFFE5E7EB)),
               ),
-              child: const TextField(
-                decoration: InputDecoration(
+              child: TextField(
+                controller: _searchController,
+                onChanged: _filterActivities,
+                decoration: const InputDecoration(
                   hintText: 'Search activities...',
                   hintStyle: TextStyle(color: Color(0xFF9CA3AF), fontSize: 14),
                   prefixIcon: Icon(
@@ -212,17 +231,36 @@ class _ActivityLogViewState extends State<_ActivityLogView> {
               ),
             ),
 
+            // Container(
+            //   decoration: BoxDecoration(
+            //     color: Colors.white,
+            //     borderRadius: BorderRadius.circular(10),
+            //     border: Border.all(color: const Color(0xFFE5E7EB)),
+            //   ),
+            //   child: const TextField(
+            //     decoration: InputDecoration(
+            //       hintText: 'Search activities...',
+            //       hintStyle: TextStyle(color: Color(0xFF9CA3AF), fontSize: 14),
+            //       prefixIcon: Icon(
+            //         Icons.search,
+            //         color: Color(0xFF6B7280),
+            //         size: 20,
+            //       ),
+            //       border: InputBorder.none,
+            //       contentPadding: EdgeInsets.symmetric(vertical: 12),
+            //     ),
+            //   ),
+            // ),
             const SizedBox(height: 12),
 
-            /// ACTIVITY LIST
             _isLoadingActivities
                 ? Center(child: Shimmer.list())
                 : SizedBox(
                     height: 250,
                     child: ListView.builder(
-                      itemCount: _activities.length,
+                      itemCount: _filteredActivities.length,
                       itemBuilder: (context, index) {
-                        final activity = _activities[index];
+                        final activity = _filteredActivities[index];
 
                         return Padding(
                           padding: const EdgeInsets.only(bottom: 8),
@@ -237,7 +275,6 @@ class _ActivityLogViewState extends State<_ActivityLogView> {
 
             const SizedBox(height: 24),
 
-            /// DURATION
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -276,7 +313,6 @@ class _ActivityLogViewState extends State<_ActivityLogView> {
 
             const SizedBox(height: 24),
 
-            /// INTENSITY
             const Text(
               'How did it feel?',
               style: TextStyle(
@@ -304,7 +340,6 @@ class _ActivityLogViewState extends State<_ActivityLogView> {
 
             const SizedBox(height: 24),
 
-            /// SAVE BUTTON
             SizedBox(
               width: double.infinity,
               height: 48,
@@ -334,7 +369,6 @@ class _ActivityLogViewState extends State<_ActivityLogView> {
 
             const SizedBox(height: 20),
 
-            /// LOGGED TODAY
             const Text(
               'Logged ',
               style: TextStyle(
@@ -346,7 +380,6 @@ class _ActivityLogViewState extends State<_ActivityLogView> {
 
             const SizedBox(height: 12),
 
-            /// 🔥 FIXED: ALWAYS FROM API
             if (_isLoadingLogs)
               Center(child: Shimmer.list())
             else if (_loggedActivities.isEmpty)
@@ -389,6 +422,41 @@ class _ActivityLogViewState extends State<_ActivityLogView> {
                           ],
                         ),
                       ),
+                      InkWell(
+                        borderRadius: BorderRadius.circular(8),
+                        onTap: () => _showEditActivityDialog(item),
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFE6F4EA),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(
+                            Icons.edit_outlined,
+                            size: 18,
+                            color: Color(0xFF0F5132),
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(width: 8),
+
+                      InkWell(
+                        borderRadius: BorderRadius.circular(8),
+                        onTap: () => _deleteActivity(item),
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFEAEA),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(
+                            Icons.delete_outline,
+                            size: 18,
+                            color: Colors.red,
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -396,6 +464,314 @@ class _ActivityLogViewState extends State<_ActivityLogView> {
           ],
         ),
       ),
+    );
+  }
+
+  Future<void> _deleteActivity(ActivityHistoryModel item) async {
+    final confirm = await showModalBottomSheet<bool>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (_) {
+        return Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+
+              const SizedBox(height: 20),
+
+              const Icon(Icons.delete_outline, color: Colors.red, size: 40),
+
+              const SizedBox(height: 12),
+
+              const Text(
+                'Delete Activity?',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+
+              const SizedBox(height: 8),
+
+              Text(
+                'Remove "${item.paName}" from your activity log?',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.grey.shade600),
+              ),
+
+              const SizedBox(height: 24),
+
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      child: const Text('Cancel'),
+                    ),
+                  ),
+
+                  const SizedBox(width: 12),
+
+                  Expanded(
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                      ),
+                      onPressed: () => Navigator.pop(context, true),
+                      child: const Text(
+                        'Delete',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+
+    if (confirm != true) return;
+
+    try {
+      await _repository.deleteActivity(item.id);
+
+      await _loadLoggedActivities(selectedDate);
+
+      AppSnackBar.show(
+        context,
+        message: 'Activity deleted',
+        type: SnackBarType.success,
+      );
+    } catch (e) {
+      AppSnackBar.show(
+        context,
+        message: e.toString(),
+        type: SnackBarType.error,
+      );
+    }
+  }
+
+  void _showEditActivityDialog(ActivityHistoryModel item) {
+    final durationController = TextEditingController(
+      text: item.durationMin.toString(),
+    );
+
+    String intensity = item.intensity;
+    String selectedActivity = item.paName;
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return Container(
+              padding: EdgeInsets.only(
+                left: 20,
+                right: 20,
+                top: 16,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+              ),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 50,
+                    height: 5,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  const Icon(
+                    Icons.edit_note_rounded,
+                    size: 40,
+                    color: Color(0xFF0F5132),
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  const Text(
+                    'Edit Activity',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF1F2937),
+                    ),
+                  ),
+
+                  const SizedBox(height: 6),
+
+                  DropdownButtonFormField<String>(
+                    value: selectedActivity,
+                    decoration: InputDecoration(
+                      labelText: 'Activity',
+                      filled: true,
+                      fillColor: const Color(0xFFF9FAFB),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                      ),
+                    ),
+                    items: _activities.map((activity) {
+                      return DropdownMenuItem(
+                        value: activity,
+                        child: Text(activity),
+                      );
+                    }).toList(),
+                    onChanged: (value) {
+                      setDialogState(() {
+                        selectedActivity = value!;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 24),
+
+                  TextField(
+                    controller: durationController,
+                    keyboardType: TextInputType.number,
+                    decoration: InputDecoration(
+                      labelText: 'Duration (minutes)',
+                      filled: true,
+                      fillColor: const Color(0xFFF9FAFB),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  DropdownButtonFormField<String>(
+                    value: intensity,
+                    decoration: InputDecoration(
+                      labelText: 'Intensity',
+                      filled: true,
+                      fillColor: const Color(0xFFF9FAFB),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                      ),
+                    ),
+                    items: const [
+                      DropdownMenuItem(value: 'Light', child: Text('Light')),
+                      DropdownMenuItem(
+                        value: 'Moderate',
+                        child: Text('Moderate'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'Vigorous',
+                        child: Text('Vigorous'),
+                      ),
+                    ],
+                    onChanged: (value) {
+                      setDialogState(() {
+                        intensity = value!;
+                      });
+                    },
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.pop(context),
+                          style: OutlinedButton.styleFrom(
+                            minimumSize: const Size.fromHeight(50),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: const Text('Cancel'),
+                        ),
+                      ),
+
+                      const SizedBox(width: 12),
+
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () async {
+                            try {
+                              final updatedModel = ActivityLogModel(
+                                paName: selectedActivity,
+                                durationMin:
+                                    int.tryParse(durationController.text) ?? 0,
+                                intensity: intensity,
+                                date: item.date,
+                              );
+
+                              await _repository.editActivity(
+                                activityId: item.id,
+                                model: updatedModel,
+                              );
+
+                              await _loadLoggedActivities(selectedDate);
+
+                              AppSnackBar.show(
+                                context,
+                                message: 'Activity updated successfully',
+                                type: SnackBarType.success,
+                              );
+                              Navigator.pop(context);
+                            } catch (e) {
+                              AppSnackBar.show(
+                                context,
+                                message: e.toString(),
+                                type: SnackBarType.error,
+                              );
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF0F5132),
+                            minimumSize: const Size.fromHeight(50),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: const Text(
+                            'Update',
+                            style: TextStyle(color: Colors.white),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
   }
 

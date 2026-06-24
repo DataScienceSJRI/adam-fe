@@ -546,7 +546,7 @@ class MealPlanScreenState extends State<MealPlanScreen> {
                   image: meal.imageUrl,
                   title: meal.foodName,
                   subtitle:
-                      '${meal.quantity} ${meal.quantityUnit} • ${meal.calories.toStringAsFixed(0)} kcal • ${meal.glValue?.toStringAsFixed(2)}',
+                      '${meal.quantity} ${meal.quantityUnit} • ${meal.calories.toStringAsFixed(0)} kcal • ${meal.glValue?.toStringAsFixed(2)} GL',
                   reaction: meal.reaction,
                   isLogged: isLogged,
                 ),
@@ -639,14 +639,18 @@ class MealPlanScreenState extends State<MealPlanScreen> {
                               .toList(),
                         );
                         _fetchMealReaction(mealSlot: mealTitle);
+                        print("LIKE API SUCCESS");
+
+                        context.read<MealPlanBloc>().add(
+                          FetchMealPlanEvent(date: targetDateString,forceRefresh: true),
+                        );
+
+                        print("FETCH EVENT SENT");
                         AppSnackBar.show(
                           context,
                           message: '$mealTitle liked',
                           type: SnackBarType.success,
                         );
-                        BlocProvider.of<MealPlanBloc>(
-                          parentContext,
-                        ).add(FetchMealPlanEvent(date: targetDateString));
                       }
                     },
                     child: Icon(
@@ -691,7 +695,7 @@ class MealPlanScreenState extends State<MealPlanScreen> {
                         );
                         BlocProvider.of<MealPlanBloc>(
                           parentContext,
-                        ).add(FetchMealPlanEvent(date: targetDateString));
+                        ).add(FetchMealPlanEvent(date: targetDateString,forceRefresh: true));
                       }
                     },
                     child: Icon(
@@ -812,7 +816,7 @@ class MealPlanScreenState extends State<MealPlanScreen> {
                     );
                     BlocProvider.of<MealPlanBloc>(
                       parentContext,
-                    ).add(FetchMealPlanEvent(date: targetDateString));
+                    ).add(FetchMealPlanEvent(date: targetDateString, forceRefresh: true));
                   }
                 },
                 child: Icon(
@@ -849,7 +853,7 @@ class MealPlanScreenState extends State<MealPlanScreen> {
                     );
                     BlocProvider.of<MealPlanBloc>(
                       parentContext,
-                    ).add(FetchMealPlanEvent(date: targetDateString));
+                    ).add(FetchMealPlanEvent(date: targetDateString,forceRefresh: true));
                   }
                 },
                 child: Icon(
@@ -1058,6 +1062,7 @@ class MealPlanScreenState extends State<MealPlanScreen> {
                                     ).add(
                                       FetchMealPlanEvent(
                                         date: targetDateString,
+                                        forceRefresh: true,
                                       ),
                                     );
                                   } else {

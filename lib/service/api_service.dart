@@ -103,6 +103,20 @@ class ApiService {
     );
   }
 
+  Future<dynamic> patch(
+    String endpoint,
+    Map<String, dynamic> body, {
+    Map<String, String>? headers,
+  }) async {
+    return _safeNetworkCall(
+      () => _client.patch(
+        Uri.parse('$baseUrl$endpoint'),
+        headers: {..._getHeaders(), ...?headers},
+        body: jsonEncode(body),
+      ),
+    );
+  }
+
   dynamic _processResponse(http.Response response) async {
     final int statusCode = response.statusCode;
 

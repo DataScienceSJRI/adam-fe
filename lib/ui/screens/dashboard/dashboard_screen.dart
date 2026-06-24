@@ -1,6 +1,7 @@
 import 'package:adam/bloc/dashboard/dashboard_bloc.dart';
 import 'package:adam/data/models/dashboard_model.dart';
 import 'package:adam/data/repositories/dashboard_repository.dart';
+import 'package:adam/ui/screens/preference/preference_screen.dart';
 import 'package:adam/ui/screens/recipes/recipes_screen.dart';
 import 'package:adam/ui/utils/shimmer.dart';
 import 'package:flutter/material.dart';
@@ -84,6 +85,27 @@ class DashboardScreenState extends State<DashboardScreen> {
                   );
                 },
               ),
+
+            ),
+            Container(
+              margin: const EdgeInsets.only(right: 6),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: IconButton(
+                icon: const Icon(
+                  Icons.dark_mode,
+                  color: Color(0xFF0F5132),
+                ),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const PreferenceScreen()),
+                  );
+                },
+              ),
+
             ),
           ],
         ),
@@ -270,7 +292,7 @@ class DashboardScreenState extends State<DashboardScreen> {
     if (gl <= 10) {
       badgeColor = Colors.green;
       status = "Low";
-    } else if (gl <= 20) {
+    } else if (gl <= 200) {
       badgeColor = Colors.orange;
       status = "Moderate";
     } else {
@@ -368,7 +390,7 @@ class DashboardScreenState extends State<DashboardScreen> {
             borderRadius: BorderRadius.circular(20),
             child: LinearProgressIndicator(
               minHeight: 10,
-              value: (gl / 40).clamp(0.0, 1.0),
+              value: (gl / 200).clamp(0.0, 1.0),
               backgroundColor: Colors.grey.shade200,
               valueColor: AlwaysStoppedAnimation(badgeColor),
             ),

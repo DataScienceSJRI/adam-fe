@@ -2,13 +2,13 @@ import 'package:adam/data/models/plan_meal_model.dart';
 import 'package:adam/data/repositories/plan_meal_repository.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-
 abstract class MealPlanEvent {}
 
 class FetchMealPlanEvent extends MealPlanEvent {
   final String date;
+  final bool? forceRefresh;
 
-  FetchMealPlanEvent({required this.date});
+  FetchMealPlanEvent({required this.date, this.forceRefresh =false});
 }
 
 /// STATES
@@ -38,13 +38,22 @@ class MealPlanBloc extends Bloc<MealPlanEvent, MealPlanState> {
 
   MealPlanBloc({required this.repository}) : super(MealPlanInitial()) {
     on<FetchMealPlanEvent>((event, emit) async {
+      print("🔥 FetchMealPlanEvent received: ${event.date}");
+
       emit(MealPlanLoading());
 
       try {
-        final meals = await repository.fetchMealPlan(date: event.date);
+        final meals = await repository.fetchMealPlan(
+          date: event.date,
+          forceRefresh: event.forceRefresh ?? true,
+        );
+
+        print("🔥 Loaded ${meals.length} meals");
 
         emit(MealPlanLoaded(meals));
       } catch (e) {
+        print("🔥 Error: $e");
+
         emit(MealPlanFailure(e.toString().replaceAll("Exception: ", "")));
       }
     });
