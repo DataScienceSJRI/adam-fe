@@ -95,7 +95,7 @@ class DashboardScreenState extends State<DashboardScreen> {
               ),
               child: IconButton(
                 icon: const Icon(
-                  Icons.dark_mode,
+                  Icons.dashboard_customize,
                   color: Color(0xFF0F5132),
                 ),
                 onPressed: () {
