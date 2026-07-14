@@ -249,7 +249,7 @@ class DietRecallRepository {
       }
 
       final response = await _apiService.get(
-        "${ApiEndpoints.getRecall}?date=$date&limit=20&offset=0",
+        "${ApiEndpoints.getRecall}?date=$date&limit=100&offset=0",
         headers: {
           'Authorization': 'Bearer $accessToken',
           'accept': 'application/json',
@@ -343,7 +343,7 @@ class DietRecallRepository {
     required String mealSlot,
     required bool didEatAsPlanned,
     required String quantity,
-    String?recipeCode,
+    String? recipeCode,
     required String foodName,
 
   }) async {

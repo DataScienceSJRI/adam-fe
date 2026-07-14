@@ -1,8 +1,8 @@
 import 'package:adam/core/constants/api_endpoints.dart';
-import 'package:adam/data/models/recipe_model.dart';
 import 'package:adam/service/api_service.dart';
 import 'package:adam/service/token_manager.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class RecipeRepository {
   final ApiService _apiService = ApiService();
@@ -14,7 +14,6 @@ class RecipeRepository {
     required int pageSize,
   }) async {
     final prefs = await SharedPreferences.getInstance();
-    final accessToken = prefs.getString('access_token') ?? "";
 
     final response = await _apiService.get(
       "${ApiEndpoints.searchRecipes}?q=$query&page=$page&page_size=$pageSize",
@@ -28,10 +27,6 @@ class RecipeRepository {
   }
 
   Future<Map<String, dynamic>> searchLogRecipes({required String query}) async {
-    final prefs = await SharedPreferences.getInstance();
-
-    final accessToken = prefs.getString('access_token') ?? "";
-
     final response = await _apiService.get(
       "${ApiEndpoints.searchRecipes}?q=$query",
       headers: {
@@ -66,6 +61,81 @@ class RecipeRepository {
       return response;
     } catch (e) {
       throw Exception("Failed to fetch recipes: $e");
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> fetchIngredients(String recipeCode) async {
+    final response = await Supabase.instance.client
+        .from('Recipes_ingredient')
+        .select('Ingredients, Ing_raw_amounts_g, Unit')
+        .eq('Recipe_Code', recipeCode);
+
+    return List<Map<String, dynamic>>.from(response);
+  }
+
+  Future<Map<String, dynamic>> likeRecipe(String recipeCode) async {
+    final body = {"Recipe_Code": recipeCode};
+    try {
+      final response = await _apiService.post(
+        "${ApiEndpoints.getRecipes}/$recipeCode/like",
+        body,
+        headers: {
+          "Authorization": "Bearer ${await tokenManager.getValidAccessToken()}",
+          'accept': 'application/json',
+        },
+      );
+      return response;
+    } catch (e) {
+      throw Exception("Failed to like recipe: $e");
+    }
+  }
+
+  Future<Map<String, dynamic>> dislikeRecipe(String recipeCode) async {
+    final body = {"Recipe_Code": recipeCode};
+    try {
+      final response = await _apiService.post(
+        "${ApiEndpoints.getRecipes}/$recipeCode/dislike",
+        body,
+        headers: {
+          "Authorization": "Bearer ${await tokenManager.getValidAccessToken()}",
+          'accept': 'application/json',
+        },
+      );
+      return response;
+    } catch (e) {
+      throw Exception("Failed to like recipe: $e");
+    }
+  }
+
+  Future<Map<String, dynamic>> fetchLikedRecipes() async {
+    try {
+      final response = await _apiService.get(
+        "${ApiEndpoints.getRecipes}/like",
+        headers: {
+          'Authorization': 'Bearer ${await tokenManager.getValidAccessToken()}',
+          'accept': 'application/json',
+        },
+      );
+
+      return response;
+    } catch (e) {
+      throw Exception("Failed to fetch liked recipes: $e");
+    }
+  }
+
+  Future<Map<String, dynamic>> fetchDislikedRecipes() async {
+    try {
+      final response = await _apiService.get(
+        "${ApiEndpoints.getRecipes}/dislike",
+        headers: {
+          'Authorization': 'Bearer ${await tokenManager.getValidAccessToken()}',
+          'accept': 'application/json',
+        },
+      );
+
+      return response;
+    } catch (e) {
+      throw Exception("Failed to fetch disliked recipes: $e");
     }
   }
 }

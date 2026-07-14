@@ -50,281 +50,6 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  void _showEditProfileDialog(BuildContext context, ProfileModel profile) {
-    final ageController = TextEditingController(text: profile.age.toString());
-
-    final weightController = TextEditingController(
-      text: profile.weight.toString(),
-    );
-
-    final heightController = TextEditingController(
-      text: profile.height.toString(),
-    );
-
-    final hba1cController = TextEditingController(
-      text: profile.hba1c.toString(),
-    );
-
-    final genderController = TextEditingController(text: profile.gender);
-
-    final activityController = TextEditingController(
-      text: profile.activityLevel,
-    );
-
-    final dietController = TextEditingController(
-      text: profile.dietRestrictions,
-    );
-
-    // showDialog(
-    //   context: context,
-    //   builder: (_) {
-    //     return AlertDialog(
-    //       shape: RoundedRectangleBorder(
-    //         borderRadius: BorderRadius.circular(20),
-    //       ),
-    //
-    //       title: const Text(
-    //         "Edit Profile",
-    //         style: TextStyle(fontWeight: FontWeight.bold),
-    //       ),
-    //
-    //       content: SingleChildScrollView(
-    //         child: Column(
-    //           mainAxisSize: MainAxisSize.min,
-    //           children: [
-    //             _field(weightController, "Weight"),
-    //             const SizedBox(height: 12),
-    //             _field(hba1cController, "HbA1c"),
-    //             const SizedBox(height: 12),
-    //             _field(activityController, "Activity Level"),
-    //           ],
-    //         ),
-    //       ),
-    //
-    //       actions: [
-    //         TextButton(
-    //           onPressed: () {
-    //             Navigator.pop(context);
-    //           },
-    //
-    //           child: const Text("Cancel"),
-    //         ),
-    //
-    //         ElevatedButton(
-    //           style: ElevatedButton.styleFrom(
-    //             backgroundColor: const Color(0xFF0F5132),
-    //           ),
-    //
-    //           onPressed: () async {
-    //             final updatedProfile = ProfileModel(
-    //               userId: profile.userId,
-    //
-    //               age: int.tryParse(ageController.text) ?? 0,
-    //
-    //               gender: genderController.text,
-    //
-    //               weight: double.tryParse(weightController.text) ?? 0,
-    //
-    //               height: double.tryParse(heightController.text) ?? 0,
-    //
-    //               hba1c: double.tryParse(hba1cController.text) ?? 0,
-    //
-    //               activityLevel: activityController.text,
-    //
-    //               dietRestrictions: dietController.text,
-    //
-    //               breakfastTime: profile.breakfastTime!.isEmpty
-    //                   ? null
-    //                   : profile.breakfastTime,
-    //               lunchTime: profile.lunchTime!.isEmpty
-    //                   ? null
-    //                   : profile.lunchTime,
-    //               dinnerTime: profile.dinnerTime!.isEmpty
-    //                   ? null
-    //                   : profile.dinnerTime,
-    //             );
-    //
-    //             try {
-    //               await ProfileRepository().updateProfile(updatedProfile);
-    //
-    //               Navigator.pop(context);
-    //
-    //               ScaffoldMessenger.of(context).showSnackBar(
-    //                 const SnackBar(
-    //                   content: Text("Profile updated successfully"),
-    //                 ),
-    //               );
-    //
-    //               context.read<ProfileBloc>().add(FetchProfileEvent());
-    //             } catch (e) {
-    //               ScaffoldMessenger.of(
-    //                 context,
-    //               ).showSnackBar(SnackBar(content: Text(e.toString())));
-    //             }
-    //           },
-    //
-    //           child: const Text("Save", style: TextStyle(color: Colors.white)),
-    //         ),
-    //       ],
-    //     );
-    //   },
-    // );
-    showDialog(
-      context: context,
-      builder: (_) {
-        return Dialog(
-          backgroundColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  height: 60,
-                  width: 60,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFEAF9F3),
-                    borderRadius: BorderRadius.circular(18),
-                  ),
-                  child: const Icon(
-                    Icons.person_outline,
-                    color: Color(0xFF008C5E),
-                    size: 30,
-                  ),
-                ),
-
-                const SizedBox(height: 16),
-
-                const Text(
-                  "Edit Profile",
-                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-                ),
-
-                const SizedBox(height: 6),
-
-                const Text(
-                  "Update your health information",
-                  style: TextStyle(color: Colors.black54),
-                ),
-
-                const SizedBox(height: 24),
-
-                _modernField(
-                  weightController,
-                  "Weight (kg)",
-                  Icons.monitor_weight_outlined,
-                ),
-
-                const SizedBox(height: 14),
-
-                _modernField(hba1cController, "HbA1c", Icons.favorite_border),
-
-                const SizedBox(height: 14),
-
-                _modernField(
-                  activityController,
-                  "Activity Level",
-                  Icons.directions_run,
-                ),
-
-                const SizedBox(height: 24),
-
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: () {
-                          Navigator.pop(context);
-                        },
-                        style: OutlinedButton.styleFrom(
-                          minimumSize: const Size.fromHeight(52),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                        ),
-                        child: const Text("Cancel"),
-                      ),
-                    ),
-
-                    const SizedBox(width: 12),
-
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () async {
-                          final updatedProfile = ProfileModel(
-                            userId: profile.userId,
-                            age: int.tryParse(ageController.text) ?? 0,
-                            gender: genderController.text,
-                            weight: double.tryParse(weightController.text) ?? 0,
-                            height: double.tryParse(heightController.text) ?? 0,
-                            hba1c: double.tryParse(hba1cController.text) ?? 0,
-                            activityLevel: activityController.text,
-                            dietRestrictions: dietController.text,
-                            breakfastTime: profile.breakfastTime!.isEmpty
-                                ? null
-                                : profile.breakfastTime,
-                            lunchTime: profile.lunchTime!.isEmpty
-                                ? null
-                                : profile.lunchTime,
-                            dinnerTime: profile.dinnerTime!.isEmpty
-                                ? null
-                                : profile.dinnerTime,
-                          );
-
-                          try {
-                            await ProfileRepository().updateProfile(
-                              updatedProfile,
-                            );
-
-                            if (!context.mounted) return;
-
-                            Navigator.pop(context);
-
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text("Profile updated successfully"),
-                              ),
-                            );
-
-                            context.read<ProfileBloc>().add(
-                              FetchProfileEvent(),
-                            );
-                          } catch (e) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text(e.toString())),
-                            );
-                          }
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF008C5E),
-                          minimumSize: const Size.fromHeight(52),
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                        ),
-                        child: const Text(
-                          "Save",
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return MultiBlocProvider(
@@ -411,8 +136,6 @@ class ProfileScreen extends StatelessWidget {
                 return RefreshIndicator(
                   onRefresh: () async {
                     context.read<ProfileBloc>().add(FetchProfileEvent());
-
-                    // helps show loader visibly
                     await Future.delayed(const Duration(milliseconds: 600));
                   },
                   child: SingleChildScrollView(
@@ -480,49 +203,6 @@ class ProfileScreen extends StatelessWidget {
                                             ),
                                           ),
                                         ),
-
-                                        // GestureDetector(
-                                        //   onTap: () {
-                                        //     _showEditProfileDialog(
-                                        //       context,
-                                        //       profile,
-                                        //     );
-                                        //   },
-                                        //
-                                        //   child: Container(
-                                        //     padding: const EdgeInsets.symmetric(
-                                        //       horizontal: 10,
-                                        //       vertical: 6,
-                                        //     ),
-                                        //
-                                        //     decoration: BoxDecoration(
-                                        //       color: const Color(0xFFE6F4EA),
-                                        //
-                                        //       borderRadius:
-                                        //           BorderRadius.circular(10),
-                                        //     ),
-                                        //
-                                        //     child: const Row(
-                                        //       children: [
-                                        //         Icon(
-                                        //           Icons.edit,
-                                        //           size: 16,
-                                        //           color: Color(0xFF0F5132),
-                                        //         ),
-                                        //
-                                        //         SizedBox(width: 4),
-                                        //
-                                        //         Text(
-                                        //           "Edit",
-                                        //           style: TextStyle(
-                                        //             color: Color(0xFF0F5132),
-                                        //             fontWeight: FontWeight.bold,
-                                        //           ),
-                                        //         ),
-                                        //       ],
-                                        //     ),
-                                        //   ),
-                                        // ),
                                       ],
                                     ),
 
@@ -550,52 +230,12 @@ class ProfileScreen extends StatelessWidget {
                                   ],
                                 ),
                               ),
-                              // Expanded(
-                              //   child: Column(
-                              //     crossAxisAlignment:
-                              //     CrossAxisAlignment.start,
-                              //
-                              //     children: [
-                              //       Text(
-                              //         profile.userId,
-                              //         style: const TextStyle(
-                              //           fontSize: 20,
-                              //           fontWeight: FontWeight.bold,
-                              //           color: Color(0xFF111827),
-                              //         ),
-                              //       ),
-                              //
-                              //       const SizedBox(height: 4),
-                              //
-                              //       Row(
-                              //         children: [
-                              //           const Icon(
-                              //             Icons.assignment_ind_outlined,
-                              //             size: 14,
-                              //             color: Color(0xFF6B7280),
-                              //           ),
-                              //
-                              //           const SizedBox(width: 4),
-                              //
-                              //           Text(
-                              //             'Gender: ${profile.gender}',
-                              //             style: TextStyle(
-                              //               fontSize: 13,
-                              //               color: Colors.grey[600],
-                              //             ),
-                              //           ),
-                              //         ],
-                              //       ),
-                              //     ],
-                              //   ),
-                              // ),
                             ],
                           ),
                         ),
 
                         const SizedBox(height: 16),
 
-                        /// HEALTH DETAILS
                         Container(
                           width: double.infinity,
 
@@ -688,7 +328,10 @@ class ProfileScreen extends StatelessWidget {
                                     onPressed: () {
                                       Navigator.push(
                                         context,
-                                        MaterialPageRoute(builder: (context) => WeightLogScreen()),
+                                        MaterialPageRoute(
+                                          builder: (context) =>
+                                              WeightLogScreen(),
+                                        ),
                                       );
                                     },
                                     style: ElevatedButton.styleFrom(
@@ -699,9 +342,14 @@ class ProfileScreen extends StatelessWidget {
                                       ),
                                     ),
                                     child: const Row(
-                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
                                       children: [
-                                        Icon(Icons.monitor_weight_outlined, color: Colors.white, size: 20),
+                                        Icon(
+                                          Icons.monitor_weight_outlined,
+                                          color: Colors.white,
+                                          size: 20,
+                                        ),
                                         SizedBox(width: 8),
                                         Text(
                                           "Log Weight",
@@ -723,8 +371,6 @@ class ProfileScreen extends StatelessWidget {
                         const SizedBox(height: 16),
 
                         const SizedBox(height: 32),
-
-                        /// LOGOUT BUTTON
                         BlocBuilder<LogoutBloc, LogoutState>(
                           builder: (context, state) {
                             final isLoading = state is LogoutLoading;
