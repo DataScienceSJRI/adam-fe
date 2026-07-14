@@ -11,6 +11,8 @@ import 'package:adam/ui/utils/shimmer.dart';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:gal/gal.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -21,13 +23,13 @@ class LogMealScreen extends StatefulWidget {
     required this.tab,
     required this.planId,
     this.didEatPlanned,
-    this.meal,
+    required this.onReturn,
   });
 
   final bool tab;
   final String? planId;
   final bool? didEatPlanned;
-  final String? meal;
+  final VoidCallback? onReturn;
 
   @override
   State<LogMealScreen> createState() => _LogMealScreenState();
@@ -57,6 +59,9 @@ class _LogMealScreenState extends State<LogMealScreen> {
   List<String> recipeUnits = [];
   bool isLoadingUnits = false;
   final Set<String> selectedMealGroups = {};
+  bool _isSaving = false;
+  final DietRecallRepository _dietRepo = DietRecallRepository();
+  List<dynamic> recallItems = [];
 
   @override
   void initState() {
@@ -64,7 +69,6 @@ class _LogMealScreenState extends State<LogMealScreen> {
     isImageSelected = widget.tab;
     _loadMealPlan(selectedDate);
     _fetchRecall(selectedDate);
-    print("meal is ${widget.meal}");
   }
 
   @override
@@ -87,7 +91,6 @@ class _LogMealScreenState extends State<LogMealScreen> {
       final List decoded = jsonDecode(mealPlanData);
 
       savedMeals = decoded.map((e) => MealPlanModel.fromJson(e)).toList();
-      print("===== SAVED MEALS =====");
       print("Total meals: ${savedMeals.length}");
 
       setState(() {});
@@ -122,9 +125,6 @@ class _LogMealScreenState extends State<LogMealScreen> {
       return [];
     }
   }
-
-  final DietRecallRepository _dietRepo = DietRecallRepository();
-  List<dynamic> recallItems = [];
 
   Future<void> _fetchRecall(DateTime date) async {
     try {
@@ -266,7 +266,12 @@ class _LogMealScreenState extends State<LogMealScreen> {
                                   final image = await _cameraController!
                                       .takePicture();
                                   final file = File(image.path);
-
+                                  try {
+                                    await Gal.putImage(file.path);
+                                    debugPrint("✅ Image saved to gallery");
+                                  } catch (e) {
+                                    debugPrint("❌ Failed to save image: $e");
+                                  }
                                   if (!mounted) return;
 
                                   Navigator.pop(context);
@@ -297,6 +302,141 @@ class _LogMealScreenState extends State<LogMealScreen> {
               ),
             );
           },
+        );
+      },
+    );
+  }
+
+  Future<void> _openImageSourcePicker({required bool isPreMeal}) async {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (BuildContext context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  "Select Image Source",
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF0F5132),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  "Choose how you want to capture your $selectedMealType log",
+                  style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  children: [
+                    // Option 1: Live Camera Sandbox Pipeline
+                    Expanded(
+                      child: InkWell(
+                        onTap: () {
+                          Navigator.pop(context); // Close selection sheet
+                          _openCamera(
+                            isPreMeal: isPreMeal,
+                          ); // Launch native camera preview
+                        },
+                        borderRadius: BorderRadius.circular(16),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 20),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFE7F5EF),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: const Color(0xFF008C5E).withOpacity(0.2),
+                            ),
+                          ),
+                          child: const Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.camera_alt_rounded,
+                                size: 32,
+                                color: Color(0xFF008C5E),
+                              ),
+                              SizedBox(height: 10),
+                              Text(
+                                "Take Photo",
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFF0F5132),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+
+                    // Option 2: Device Media Photo Gallery
+                    Expanded(
+                      child: InkWell(
+                        onTap: () async {
+                          Navigator.pop(context); // Close selection sheet
+                          try {
+                            final ImagePicker picker = ImagePicker();
+                            final XFile? image = await picker.pickImage(
+                              source: ImageSource.gallery,
+                              imageQuality: 85,
+                            );
+
+                            if (image == null) return;
+                            final file = File(image.path);
+
+                            if (!mounted) return;
+                            _showImagePreview(file: file, isPreMeal: isPreMeal);
+                          } catch (e) {
+                            debugPrint("Gallery Picker Exception: $e");
+                          }
+                        },
+                        borderRadius: BorderRadius.circular(16),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 20),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF6F6F6),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: Colors.grey.shade200),
+                          ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.photo_library_rounded,
+                                size: 32,
+                                color: Colors.grey.shade700,
+                              ),
+                              const SizedBox(height: 10),
+                              const Text(
+                                "From Gallery",
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFF111827),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
         );
       },
     );
@@ -436,6 +576,16 @@ class _LogMealScreenState extends State<LogMealScreen> {
     );
   }
 
+  Future<void> _saveImageToGallery(File file) async {
+    try {
+      await Gal.putImage(file.path);
+      debugPrint("✅ Image saved to gallery");
+    } catch (e) {
+      debugPrint("❌ Gallery save failed: $e");
+      rethrow;
+    }
+  }
+
   Future<void> _searchRecipes(String query) async {
     if (query.trim().isEmpty) {
       setState(() {
@@ -499,6 +649,13 @@ class _LogMealScreenState extends State<LogMealScreen> {
         backgroundColor: Colors.white,
         centerTitle: true,
         elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            if (widget.onReturn != null) widget.onReturn!();
+            Navigator.pop(context);
+          },
+        ),
         title: const Text(
           'Log Meal',
           style: TextStyle(
@@ -1142,29 +1299,6 @@ class _LogMealScreenState extends State<LogMealScreen> {
 
                                       const SizedBox(height: 10),
 
-                                      // Row(
-                                      //   children: [
-                                      //     Icon(
-                                      //       planned
-                                      //           ? Icons.task_alt
-                                      //           : Icons.change_circle,
-                                      //       size: 16,
-                                      //       color: planned
-                                      //           ? Colors.green
-                                      //           : Colors.orange,
-                                      //     ),
-                                      //     const SizedBox(width: 4),
-                                      //     Text(
-                                      //       planned ? "As Planned" : "Modified",
-                                      //       style: TextStyle(
-                                      //         color: planned
-                                      //             ? Colors.green
-                                      //             : Colors.orange,
-                                      //         fontWeight: FontWeight.w600,
-                                      //       ),
-                                      //     ),
-                                      //   ],
-                                      // ),
                                       Row(
                                         children: [
                                           Icon(
@@ -1193,12 +1327,6 @@ class _LogMealScreenState extends State<LogMealScreen> {
                                             InkWell(
                                               onTap: () {
                                                 Navigator.pop(context);
-                                                AppSnackBar.show(
-                                                  context,
-                                                  message:
-                                                      "Edit is not available for now",
-                                                  type: SnackBarType.error,
-                                                );
                                                 _showRecallEditBottomSheet(
                                                   item,
                                                 );
@@ -1351,6 +1479,65 @@ class _LogMealScreenState extends State<LogMealScreen> {
     );
   }
 
+  Future<bool> _shouldProceedWithEdit({
+    required Map<String, dynamic> currentItem,
+    required String mealSlot,
+  }) async {
+    print("========== _shouldProceedWithEdit ==========");
+
+    final limit = mealSlot.toLowerCase() == "snacks" ? 500 : 750;
+
+    double totalCalories = 0;
+
+    print("Current Recall Id = ${currentItem['id']}");
+    print("Meal Slot = $mealSlot");
+
+    for (final item in recallItems) {
+      final itemSlot = (item["meal_slot"] ?? "").toString().toLowerCase();
+
+      if (itemSlot != mealSlot.toLowerCase()) {
+        continue;
+      }
+
+      // Skip the item being edited
+      if (item["id"] == currentItem["id"]) {
+        continue;
+      }
+
+      final calories = double.tryParse(item["energy_kcal"].toString()) ?? 0;
+
+      totalCalories += calories;
+
+      print(
+        "Adding ${item["food_name"]} -> $calories kcal | Total = $totalCalories",
+      );
+    }
+
+    // Add calories of edited item
+    final editedCalories =
+        double.tryParse(currentItem["energy_kcal"].toString()) ?? 0;
+
+    totalCalories += editedCalories;
+
+    print("--------------------------------");
+    print("Total Calories = $totalCalories");
+    print("Limit = $limit");
+    print("--------------------------------");
+
+    if (totalCalories <= limit) {
+      print("Within limit");
+      return true;
+    }
+
+    final result = await _showConfirmationDialog(
+      totalCalories,
+      limit,
+      mealSlot,
+    );
+
+    return result ?? false;
+  }
+
   void _showRecallEditBottomSheet(Map<String, dynamic> item) {
     final recipeController = TextEditingController(
       text: (item['food_name'] ?? '').toString(),
@@ -1371,235 +1558,546 @@ class _LogMealScreenState extends State<LogMealScreen> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (sheetContext) {
-        return StatefulBuilder(
-          builder: (context, setModalState) {
-            return Container(
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-              ),
-              child: Padding(
-                padding: EdgeInsets.only(
-                  left: 20,
-                  right: 20,
-                  top: 20,
-                  bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+        return Scaffold(
+          body: StatefulBuilder(
+            builder: (context, setModalState) {
+              return Container(
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
                 ),
-                child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: 45,
-                        height: 5,
-                        decoration: BoxDecoration(
-                          color: Colors.grey.shade300,
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                      ),
-
-                      const SizedBox(height: 24),
-
-                      const Text(
-                        "Edit Meal",
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-
-                      const SizedBox(height: 24),
-
-                      // TextField(
-                      //   controller: recipeController,
-                      //   decoration: InputDecoration(
-                      //     labelText: "Recipe Name",
-                      //     border: OutlineInputBorder(
-                      //       borderRadius: BorderRadius.circular(12),
-                      //     ),
-                      //   ),
-                      // ),
-                      TextField(
-                        controller: recipeController,
-                        onChanged: (value) {
-                          if (_debounce?.isActive ?? false) {
-                            _debounce?.cancel();
-                          }
-
-                          _debounce = Timer(
-                            const Duration(milliseconds: 500),
-                            () {
-                              _searchRecipes(value);
-                            },
-                          );
-                        },
-                        decoration: InputDecoration(
-                          labelText: "Recipe Name",
-                          prefixIcon: const Icon(Icons.search),
-
-                          suffixIcon: isSearching
-                              ? Padding(
-                                  padding: EdgeInsets.all(14),
-                                  child: SizedBox(
-                                    height: 18,
-                                    width: 18,
-                                    child: Shimmer.card(),
-                                  ),
-                                )
-                              : null,
-
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-
-                      TextField(
-                        controller: quantityController,
-                        keyboardType: const TextInputType.numberWithOptions(
-                          decimal: true,
-                        ),
-                        decoration: InputDecoration(
-                          labelText: "Quantity",
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                      ),
-
-                      const SizedBox(height: 16),
-
-                      DropdownButtonFormField<String>(
-                        value: selectedMealTime,
-                        decoration: InputDecoration(
-                          labelText: "Meal Time",
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        items: mealTimes
-                            .map(
-                              (meal) => DropdownMenuItem(
-                                value: meal,
-                                child: Text(
-                                  meal[0].toUpperCase() + meal.substring(1),
-                                ),
-                              ),
-                            )
-                            .toList(),
-                        onChanged: (value) {
-                          if (value != null) {
-                            setModalState(() {
-                              selectedMealTime = value;
-                            });
-                          }
-                        },
-                      ),
-                      if (searchedRecipes.isNotEmpty) ...[
-                        const SizedBox(height: 10),
-
+                child: Padding(
+                  padding: EdgeInsets.only(
+                    left: 20,
+                    right: 20,
+                    top: 20,
+                    bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+                  ),
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
                         Container(
-                          constraints: const BoxConstraints(maxHeight: 250),
+                          width: 45,
+                          height: 5,
                           decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: const Color(0xFFE4E4E4)),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.05),
-                                blurRadius: 8,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
+                            color: Colors.grey.shade300,
+                            borderRadius: BorderRadius.circular(20),
                           ),
-                          child: ListView.separated(
-                            shrinkWrap: true,
-                            padding: const EdgeInsets.all(8),
-                            itemCount: searchedRecipes.length,
-                            separatorBuilder: (_, __) =>
-                                const Divider(height: 1),
-                            itemBuilder: (context, index) {
-                              final recipe = searchedRecipes[index];
+                        ),
 
-                              return ListTile(
-                                leading: ClipRRect(
-                                  borderRadius: BorderRadius.circular(8),
-                                  child: Image.network(
-                                    'https://datatools.sjri.res.in/static/VD/food_images_large/${recipe.recipeCode}.jpg',
-                                    width: 40,
-                                    height: 40,
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (_, __, ___) =>
-                                        const Icon(Icons.fastfood),
+                        const SizedBox(height: 24),
+
+                        const Text(
+                          "Edit Meal",
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+
+                        const SizedBox(height: 24),
+
+                        TextField(
+                          controller: recipeController,
+                          onChanged: (value) {
+                            if (_debounce?.isActive ?? false) {
+                              _debounce?.cancel();
+                            }
+
+                            _debounce = Timer(
+                              const Duration(milliseconds: 500),
+                              () {
+                                _searchRecipes(value);
+                              },
+                            );
+                          },
+                          decoration: InputDecoration(
+                            labelText: "Recipe Name",
+                            prefixIcon: const Icon(Icons.search),
+
+                            suffixIcon: isSearching
+                                ? Padding(
+                                    padding: EdgeInsets.all(14),
+                                    child: SizedBox(
+                                      height: 18,
+                                      width: 18,
+                                      child: Shimmer.card(),
+                                    ),
+                                  )
+                                : null,
+
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+
+                        TextField(
+                          controller: quantityController,
+                          keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
+                          decoration: InputDecoration(
+                            labelText: "Quantity",
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                        ),
+
+                        const SizedBox(height: 16),
+
+                        DropdownButtonFormField<String>(
+                          value: selectedMealTime,
+                          decoration: InputDecoration(
+                            labelText: "Meal Time",
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          items: mealTimes
+                              .map(
+                                (meal) => DropdownMenuItem(
+                                  value: meal,
+                                  child: Text(
+                                    meal[0].toUpperCase() + meal.substring(1),
                                   ),
                                 ),
-                                title: Text(recipe.recipeName),
-                                subtitle: Text(recipe.recipeCategory),
-                                onTap: () {
-                                  recipeController.text = recipe.recipeName;
+                              )
+                              .toList(),
+                          onChanged: (value) {
+                            if (value != null) {
+                              setModalState(() {
+                                selectedMealTime = value;
+                              });
+                            }
+                          },
+                        ),
+                        if (searchedRecipes.isNotEmpty) ...[
+                          const SizedBox(height: 10),
 
-                                  setState(() {
-                                    selectedRecipe = recipe;
-                                    searchedRecipes.clear();
-                                  });
+                          Container(
+                            constraints: const BoxConstraints(maxHeight: 250),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: const Color(0xFFE4E4E4),
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.05),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: ListView.separated(
+                              shrinkWrap: true,
+                              padding: const EdgeInsets.all(8),
+                              itemCount: searchedRecipes.length,
+                              separatorBuilder: (_, __) =>
+                                  const Divider(height: 1),
+                              itemBuilder: (context, index) {
+                                final recipe = searchedRecipes[index];
 
-                                  FocusScope.of(context).unfocus();
-                                },
+                                return ListTile(
+                                  leading: ClipRRect(
+                                    borderRadius: BorderRadius.circular(8),
+                                    child: Image.network(
+                                      'https://datatools.sjri.res.in/static/VD/food_images_large/${recipe.recipeCode}.jpg',
+                                      width: 40,
+                                      height: 40,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (_, __, ___) =>
+                                          const Icon(Icons.fastfood),
+                                    ),
+                                  ),
+                                  title: Text(recipe.recipeName),
+                                  onTap: () {
+                                    recipeController.text = recipe.recipeName;
+
+                                    setState(() {
+                                      selectedRecipe = recipe;
+                                      searchedRecipes.clear();
+                                    });
+
+                                    FocusScope.of(context).unfocus();
+                                  },
+                                );
+                              },
+                            ),
+                          ),
+                        ],
+                        const SizedBox(height: 24),
+
+                        SizedBox(
+                          width: double.infinity,
+                          height: 54,
+                          child: ElevatedButton.icon(
+                            // onPressed: () async {
+                            //   final String enteredFoodName = recipeController
+                            //       .text
+                            //       .trim();
+                            //   final String enteredQuantity = quantityController
+                            //       .text
+                            //       .trim();
+                            //
+                            //   if (enteredFoodName.isEmpty) {
+                            //     AppSnackBar.show(
+                            //       sheetContext,
+                            //       message: "Meal name cannot be empty",
+                            //       type: SnackBarType.error,
+                            //     );
+                            //     return;
+                            //   }
+                            //
+                            //   if (enteredQuantity.isEmpty ||
+                            //       double.tryParse(enteredQuantity) == null ||
+                            //       double.parse(enteredQuantity) <= 0) {
+                            //     AppSnackBar.show(
+                            //       sheetContext,
+                            //       message:
+                            //           "Please enter a valid quantity greater than 0",
+                            //       type: SnackBarType.error,
+                            //     );
+                            //     return;
+                            //   }
+                            //   try {
+                            //     await _dietRepo.editRecall(
+                            //       recallId: item['id'],
+                            //       foodName: recipeController.text,
+                            //       quantity: quantityController.text,
+                            //       mealSlot: selectedMealTime,
+                            //       didEatAsPlanned:
+                            //           widget.didEatPlanned ?? false,
+                            //     );
+                            //
+                            //     Navigator.pop(context);
+                            //
+                            //     await _fetchRecall(selectedDate);
+                            //   } catch (e) {
+                            //     AppSnackBar.show(
+                            //       context,
+                            //       message: "Failed to update meal",
+                            //       type: SnackBarType.error,
+                            //     );
+                            //   }
+                            // },
+                            onPressed: () async {
+                              print("===== UPDATE BUTTON PRESSED =====");
+
+                              final enteredFoodName = recipeController.text
+                                  .trim();
+                              final enteredQuantity = quantityController.text
+                                  .trim();
+                              print("Before validation");
+
+                              if (enteredFoodName.isEmpty) {
+                                AppSnackBar.show(
+                                  sheetContext,
+                                  message: "Meal name cannot be empty",
+                                  type: SnackBarType.error,
+                                );
+                                return;
+                              }
+
+                              if (enteredQuantity.isEmpty ||
+                                  double.tryParse(enteredQuantity) == null ||
+                                  double.parse(enteredQuantity) <= 0) {
+                                AppSnackBar.show(
+                                  sheetContext,
+                                  message:
+                                      "Please enter a valid quantity greater than 0",
+                                  type: SnackBarType.error,
+                                );
+                                return;
+                              }
+
+                              final shouldUpdate = await _shouldProceedWithEdit(
+                                currentItem: item,
+                                mealSlot: selectedMealTime,
                               );
+
+                              if (!shouldUpdate) {
+                                return;
+                              }
+
+                              try {
+                                await _dietRepo.editRecall(
+                                  recallId: item['id'],
+                                  foodName: recipeController.text,
+                                  quantity: quantityController.text,
+                                  mealSlot: selectedMealTime,
+                                  didEatAsPlanned:
+                                      widget.didEatPlanned ?? false,
+                                );
+
+                                Navigator.pop(context);
+
+                                await _fetchRecall(selectedDate);
+                              } catch (e) {
+                                AppSnackBar.show(
+                                  context,
+                                  message: "Failed to update meal",
+                                  type: SnackBarType.error,
+                                );
+                              }
                             },
+                            icon: const Icon(Icons.check),
+                            label: const Text("Update Meal"),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF008C5E),
+                              foregroundColor: Colors.white,
+                            ),
                           ),
                         ),
                       ],
-                      const SizedBox(height: 24),
-
-                      SizedBox(
-                        width: double.infinity,
-                        height: 54,
-                        child: ElevatedButton.icon(
-                          onPressed: () async {
-                            try {
-                              print("Recall ID => ${item['id']}");
-                              print("Recipe => ${recipeController.text}");
-                              print("Quantity => ${quantityController.text}");
-                              print("Meal Time => $selectedMealTime");
-
-                              await _dietRepo.editRecall(
-                                recallId: item['id'],
-                                foodName: recipeController.text,
-                                quantity: quantityController.text,
-                                mealSlot: selectedMealTime,
-                                didEatAsPlanned: widget.didEatPlanned ?? false,
-                              );
-
-                              Navigator.pop(context);
-
-                              await _fetchRecall(selectedDate);
-                            } catch (e) {
-                              AppSnackBar.show(
-                                context,
-                                message: "Failed to update meal",
-                                type: SnackBarType.error,
-                              );
-                            }
-                          },
-                          icon: const Icon(Icons.check),
-                          label: const Text("Update Meal"),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF008C5E),
-                            foregroundColor: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
                 ),
-              ),
-            );
-          },
+              );
+            },
+          ),
         );
       },
     );
+  }
+
+  Future<bool> _shouldProceedWithSave() async {
+    print("\n========== _shouldProceedWithSave ==========");
+
+    print("selectedRecipe = ${selectedRecipe?.recipeCode}");
+    print("selectedMealType = $selectedMealType");
+    print("selectedMeals Count = ${selectedMeals.length}");
+    print("selectedMealGroups = $selectedMealGroups");
+    print("didEatPlanned = ${widget.didEatPlanned}");
+    print("quantity = ${quantityController.text}");
+    print("recallItems Count = ${recallItems.length}");
+
+    //--------------------------------------------------
+    // Determine current meal slot
+    //--------------------------------------------------
+
+    String mealSlot = "";
+
+    if (selectedMeals.isNotEmpty) {
+      print("\n📦 BULK SAVE");
+
+      for (final meal in selectedMeals) {
+        print(
+          "Selected Meal -> ${meal.recipeCode} | ${meal.mealType} | ${meal.quantity}",
+        );
+      }
+
+      mealSlot = selectedMeals.first.mealType.trim().toLowerCase();
+
+      print("Meal slot resolved from selectedMeals = $mealSlot");
+    } else if (widget.didEatPlanned == true && selectedMealGroups.isNotEmpty) {
+      print("\n📋 PLANNED MEAL");
+
+      mealSlot = selectedMealGroups.first.trim().toLowerCase();
+
+      print("Meal slot resolved from selectedMealGroups = $mealSlot");
+    } else {
+      print("\n🥣 MANUAL RECIPE");
+
+      if (selectedRecipe == null) {
+        print("selectedRecipe is NULL");
+        return true;
+      }
+
+      final qty = double.tryParse(quantityController.text.trim()) ?? 0;
+
+      if (qty <= 0) {
+        print("Quantity invalid");
+        return true;
+      }
+
+      mealSlot = selectedMealType.trim().toLowerCase();
+
+      print("Meal slot resolved from selectedMealType = $mealSlot");
+    }
+
+    //--------------------------------------------------
+    // Safety
+    //--------------------------------------------------
+
+    if (mealSlot.isEmpty) {
+      print("Meal slot empty. Skipping dialog.");
+      return true;
+    }
+
+    final limit = mealSlot == "snacks" ? 500 : 750;
+
+    print("\nMeal Slot = $mealSlot");
+    print("Limit = $limit");
+
+    //--------------------------------------------------
+    // Calculate calories
+    //--------------------------------------------------
+
+    double totalCalories = 0;
+
+    print("\n------------- RECALL ITEMS -------------");
+    for (final item in recallItems) {
+      print(
+        "${item['meal_slot']} | ${item['food_name']} | ${item['energy_kcal']}",
+      );
+    }
+
+    for (int i = 0; i < recallItems.length; i++) {
+      final item = recallItems[i];
+
+      final itemMealSlot = (item["meal_slot"] ?? "")
+          .toString()
+          .trim()
+          .toLowerCase();
+
+      final energy = double.tryParse(item["energy_kcal"].toString()) ?? 0;
+
+      print(
+        "Item $i -> slot=$itemMealSlot energy=$energy food=${item["food_name"]}",
+      );
+
+      if (itemMealSlot == mealSlot) {
+        totalCalories += energy;
+
+        print("✅ MATCH");
+        print("Running Total = $totalCalories");
+      } else {
+        print("❌ NO MATCH");
+      }
+    }
+
+    print("----------------------------------------");
+    print("Meal Slot       = $mealSlot");
+    print("Total Calories  = $totalCalories");
+    print("Limit           = $limit");
+    print("----------------------------------------");
+
+    if (totalCalories <= limit) {
+      print("Calories within limit.");
+      return true;
+    }
+
+    print("Calories exceeded. Showing dialog...");
+
+    final result = await _showConfirmationDialog(
+      totalCalories,
+      limit,
+      mealSlot,
+    );
+
+    print("Dialog Result = $result");
+
+    return result ?? false;
+  }
+
+  Future<bool?> _showConfirmationDialog(
+    double totalCalories,
+    int limit,
+    String mealSlot,
+  ) {
+    print("\n========== SHOW DIALOG ==========");
+    print("Meal Slot = $mealSlot");
+    print("Total Calories = $totalCalories");
+    print("Limit = $limit");
+
+    final title = mealSlot.isNotEmpty
+        ? "${mealSlot[0].toUpperCase()}${mealSlot.substring(1)}"
+        : "Meal";
+
+    return showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => AlertDialog(
+        title: const Text("Confirm Meal Log"),
+        content: Text(
+          "You have already logged "
+          "${totalCalories.toStringAsFixed(0)} kcal for $title.\n\n"
+          "This exceeds the recommended limit of $limit kcal.\n\n"
+          "Are you sure you want to log another meal?",
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              print("❌ User tapped Cancel");
+              Navigator.pop(context, false);
+            },
+            child: const Text("Cancel"),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              print("✅ User tapped Log Anyway");
+              Navigator.pop(context, true);
+            },
+            child: const Text("Log Anyway"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<bool> _shouldProceedWithMealPlanUpdate(MealPlanModel meal) async {
+    print("\n========== _shouldProceedWithMealPlanUpdate ==========");
+
+    final mealSlot = meal.mealType.trim().toLowerCase();
+    final limit = mealSlot == "snacks" ? 500 : 750;
+
+    print("Meal Slot = $mealSlot");
+    print("Limit = $limit");
+
+    double totalCalories = 0;
+
+    print("\n------------- RECALL ITEMS -------------");
+    for (final item in recallItems) {
+      print(
+        "${item['meal_slot']} | ${item['food_name']} | ${item['energy_kcal']}",
+      );
+    }
+
+    for (final item in recallItems) {
+      final itemMealSlot = (item["meal_slot"] ?? "")
+          .toString()
+          .trim()
+          .toLowerCase();
+
+      if (itemMealSlot != mealSlot) {
+        continue;
+      }
+
+      final calories = double.tryParse(item["energy_kcal"].toString()) ?? 0;
+
+      totalCalories += calories;
+
+      print(
+        "Adding ${item["food_name"]} -> $calories kcal | Total = $totalCalories",
+      );
+    }
+
+    print("----------------------------------------");
+    print("Meal Slot      = $mealSlot");
+    print("Total Calories = $totalCalories");
+    print("Limit          = $limit");
+    print("----------------------------------------");
+
+    if (totalCalories <= limit) {
+      print("Calories within limit.");
+      return true;
+    }
+
+    print("Calories exceeded. Showing dialog...");
+
+    final result = await _showConfirmationDialog(
+      totalCalories,
+      limit,
+      mealSlot,
+    );
+
+    return result ?? false;
   }
 
   void _showEditMealBottomSheet(MealPlanModel meal) {
@@ -1768,7 +2266,23 @@ class _LogMealScreenState extends State<LogMealScreen> {
                   width: double.infinity,
                   height: 54,
                   child: ElevatedButton.icon(
+                    // onPressed: () async {
+                    //   await _saveMealLog(
+                    //     meal,
+                    //     quantityController.text,
+                    //     widget.didEatPlanned ?? false,
+                    //   );
+                    //
+                    //   if (mounted) {
+                    //     Navigator.pop(context);
+                    //   }
+                    // },
                     onPressed: () async {
+                      final shouldProceed =
+                          await _shouldProceedWithMealPlanUpdate(meal);
+
+                      if (!shouldProceed) return;
+
                       await _saveMealLog(
                         meal,
                         quantityController.text,
@@ -1825,7 +2339,7 @@ class _LogMealScreenState extends State<LogMealScreen> {
 
           child: DropdownButtonHideUnderline(
             child: DropdownButton<String>(
-              value: widget.meal,
+              value: selectedMealType,
 
               isExpanded: true,
 
@@ -1872,7 +2386,7 @@ class _LogMealScreenState extends State<LogMealScreen> {
 
         GestureDetector(
           onTap: () {
-            _openCamera(isPreMeal: true);
+            _openImageSourcePicker(isPreMeal: true);
           },
           child: Container(
             height: 260,
@@ -1924,7 +2438,7 @@ class _LogMealScreenState extends State<LogMealScreen> {
                         right: 12,
                         child: GestureDetector(
                           onTap: () {
-                            _openCamera(isPreMeal: true);
+                            _openImageSourcePicker(isPreMeal: true);
                           },
                           child: Container(
                             padding: const EdgeInsets.all(8),
@@ -1977,7 +2491,7 @@ class _LogMealScreenState extends State<LogMealScreen> {
 
         GestureDetector(
           onTap: () {
-            _openCamera(isPreMeal: false);
+            _openImageSourcePicker(isPreMeal: false);
           },
           child: Container(
             height: 150,
@@ -2018,7 +2532,7 @@ class _LogMealScreenState extends State<LogMealScreen> {
                         right: 12,
                         child: GestureDetector(
                           onTap: () {
-                            _openCamera(isPreMeal: false);
+                            _openImageSourcePicker(isPreMeal: false);
                           },
                           child: Container(
                             padding: const EdgeInsets.all(8),
@@ -2277,16 +2791,6 @@ class _LogMealScreenState extends State<LogMealScreen> {
                                           fontSize: 15,
                                         ),
                                       ),
-
-                                      const SizedBox(height: 4),
-
-                                      Text(
-                                        recipe.recipeCategory,
-                                        style: const TextStyle(
-                                          color: Colors.black54,
-                                          fontSize: 12,
-                                        ),
-                                      ),
                                     ],
                                   ),
                                 ),
@@ -2323,7 +2827,7 @@ class _LogMealScreenState extends State<LogMealScreen> {
 
                   child: DropdownButtonHideUnderline(
                     child: DropdownButton<String>(
-                      value: widget.meal,
+                      value: selectedMealType,
                       isExpanded: true,
                       icon: const Icon(Icons.keyboard_arrow_down),
                       items: mealTypes.map((meal) {
@@ -2472,14 +2976,6 @@ class _LogMealScreenState extends State<LogMealScreen> {
     final targetDateString =
         "${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}";
 
-    final units = await _fetchRecipeUnitValues(meal.recipeCode ?? "");
-    for (final meal in selectedMeals) {
-      print("Food: ${meal.foodName}");
-      print("Recipe: ${meal.recipeCode}");
-      print("Qty: ${meal.quantity}");
-      print("Unit: ${meal.quantityUnit}");
-      print("Plan: ${meal.planId}");
-    }
     await _dietRecallRepository.logViaSearchChoose(
       recipeCode: meal.recipeCode ?? "",
       mealSlot: meal.mealType.toLowerCase(),
@@ -2487,165 +2983,424 @@ class _LogMealScreenState extends State<LogMealScreen> {
       didEatAsPlanned: widget.didEatPlanned ?? false,
       planId: widget.planId ?? "",
       date: targetDateString,
-      // unit: units.isNotEmpty ? units.first : "",
     );
   }
 
+  // Widget _saveButton(bool isImage) {
+  //   return SizedBox(
+  //     width: double.infinity,
+  //     height: 58,
+  //     child: ElevatedButton(
+  //       onPressed: () async {
+  //         try {
+  //           if (isImage) {
+  //             if (preMealImage == null) {
+  //               AppSnackBar.show(
+  //                 context,
+  //                 message: "Please capture a pre-meal image first",
+  //                 type: SnackBarType.error,
+  //               );
+  //               return;
+  //             } else {
+  //               AppSnackBar.show(
+  //                 context,
+  //                 message:
+  //                     "Your Image has been sent to out team , you'll be notified once it's processed",
+  //                 type: SnackBarType.success,
+  //               );
+  //             }
+  //           }
+  //           final targetDateString =
+  //               "${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}";
+  //           print("Selected Meals Count = ${selectedMeals.length}");
+  //
+  //           for (final meal in selectedMeals) {
+  //             print("Recipe Code = ${meal.recipeCode}");
+  //             print("Meal Type = ${meal.mealType}");
+  //             print("Quantity = ${meal.quantity}");
+  //           }
+  //           if (!isImage) {
+  //             if (selectedMeals.isNotEmpty) {
+  //               for (final meal in selectedMeals) {
+  //                 await _dietRecallRepository.logViaSearchChoose(
+  //                   recipeCode: meal.recipeCode ?? "",
+  //                   mealSlot: meal.mealType.toLowerCase(),
+  //                   quantity: meal.quantity.toString(),
+  //                   didEatAsPlanned: widget.didEatPlanned ?? false,
+  //                   planId: widget.planId ?? "",
+  //                   date: targetDateString,
+  //                   unit: meal.quantityUnit.toString(),
+  //                 );
+  //               }
+  //             } else if (widget.didEatPlanned == true) {
+  //               debugPrint(
+  //                 "savedMeals: ${savedMeals.map((e) => e.mealType).toList()}",
+  //               );
+  //               debugPrint("selectedMealGroups: $selectedMealGroups");
+  //               final firstMeal = savedMeals.firstWhere(
+  //                 (m) => selectedMealGroups.contains(m.mealType),
+  //               );
+  //
+  //               await _dietRecallRepository.logViaSearchChoose(
+  //                 recipeCode: firstMeal.recipeCode ?? "",
+  //                 mealSlot: firstMeal.mealType.toLowerCase(),
+  //                 quantity: firstMeal.quantity.toString(),
+  //                 didEatAsPlanned: widget.didEatPlanned ?? false,
+  //                 planId: firstMeal.planId,
+  //                 date: targetDateString,
+  //               );
+  //             } else {
+  //               await _dietRecallRepository.logViaSearchChoose(
+  //                 recipeCode: selectedRecipe?.recipeCode ?? "",
+  //                 mealSlot: selectedMealType.toLowerCase(),
+  //                 quantity: quantityController.text.trim(),
+  //                 didEatAsPlanned: widget.didEatPlanned ?? false,
+  //                 planId: widget.planId ?? "",
+  //                 date: targetDateString,
+  //                 unit: recipeUnits.first,
+  //               );
+  //             }
+  //           } else if (isImage && preMealImage != null) {
+  //             await _dietRecallRepository.logViaSearchChoose(
+  //               recipeCode: selectedRecipe?.recipeCode ?? "",
+  //               mealSlot: selectedMealType.toLowerCase(),
+  //               quantity: quantityController.text.trim(),
+  //               didEatAsPlanned: widget.didEatPlanned ?? false,
+  //               planId: widget.planId ?? "",
+  //               date: targetDateString,
+  //             );
+  //           }
+  //
+  //           if (!mounted) return;
+  //           AppSnackBar.show(
+  //             context,
+  //             message: "Meal Logged successfully",
+  //             type: SnackBarType.success,
+  //           );
+  //
+  //           setState(() {
+  //             searchController.clear();
+  //             quantityController.text = "1";
+  //             selectedRecipe = null;
+  //           });
+  //         } catch (e, stackTrace) {
+  //           debugPrint("DETAILED ERROR: $e");
+  //           debugPrint("STACK TRACE: $stackTrace");
+  //           AppSnackBar.show(
+  //             context,
+  //             message: "Failed to save $e",
+  //             type: SnackBarType.error,
+  //           );
+  //         }
+  //       },
+  //       style: ElevatedButton.styleFrom(
+  //         backgroundColor: const Color(0xFF007A50),
+  //         elevation: 0,
+  //         shape: RoundedRectangleBorder(
+  //           borderRadius: BorderRadius.circular(14),
+  //         ),
+  //       ),
+  //       child: const Text(
+  //         'Save meal log',
+  //         style: TextStyle(
+  //           fontSize: 17,
+  //           fontWeight: FontWeight.w600,
+  //           color: Colors.white,
+  //         ),
+  //       ),
+  //     ),
+  //   );
+  // }
   Widget _saveButton(bool isImage) {
     return SizedBox(
       width: double.infinity,
       height: 58,
       child: ElevatedButton(
-        onPressed: () async {
-          try {
-            if (isImage) {
-              if (preMealImage == null) {
-                AppSnackBar.show(
-                  context,
-                  message: "Please capture a pre-meal image first",
-                  type: SnackBarType.error,
-                );
-                return;
-              } else {
-                AppSnackBar.show(
-                  context,
-                  message:
-                      "Your Image has been sent to out team , you'll be notified once it's processed",
-                  type: SnackBarType.success,
-                );
-              }
-            }
-            final targetDateString =
-                "${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}";
-            print("Selected Meals Count = ${selectedMeals.length}");
+        onPressed: _isSaving
+            ? null
+            : () async {
+                print("========================================");
+                print("🟢 SAVE BUTTON PRESSED");
+                print("isImage: $isImage");
+                print("selectedRecipe: ${selectedRecipe?.recipeCode}");
+                print("selectedMealType: $selectedMealType");
+                print("quantity: ${quantityController.text}");
+                print("selectedMeals count: ${selectedMeals.length}");
+                print("selectedMealGroups: $selectedMealGroups");
+                print("didEatPlanned: ${widget.didEatPlanned}");
+                print("========================================");
 
-            for (final meal in selectedMeals) {
-              print("Recipe Code = ${meal.recipeCode}");
-              print("Meal Type = ${meal.mealType}");
-              print("Quantity = ${meal.quantity}");
-            }
-            if (!isImage) {
-              for (final meal in selectedMeals) {
-                print("Food: ${meal.foodName}");
-                print("Recipe: ${meal.recipeCode}");
-                print("Qty: ${meal.quantity}");
-                print("Unit: ${meal.quantityUnit}");
-                print("Plan: ${meal.planId}");
-                print("unit :${meal.quantityUnit}");
-                // print("recipe unit ${recipeUnits.first}");
-              }
-              if (selectedMeals.isNotEmpty) {
-                for (final meal in selectedMeals) {
-                  await _dietRecallRepository.logViaSearchChoose(
-                    recipeCode: meal.recipeCode ?? "",
-                    mealSlot: meal.mealType.toLowerCase(),
-                    quantity: meal.quantity.toString(),
-                    didEatAsPlanned: widget.didEatPlanned ?? false,
-                    planId: widget.planId ?? "",
-                    date: targetDateString,
-                    unit: meal.quantityUnit.toString(),
+                setState(() => _isSaving = true);
+
+                try {
+                  print("➡️ Entered try block");
+
+                  if (isImage) {
+                    print("📷 Image logging flow");
+
+                    if (preMealImage == null) {
+                      print("❌ No pre meal image selected");
+
+                      AppSnackBar.show(
+                        context,
+                        message: "Please capture a pre-meal image first",
+                        type: SnackBarType.error,
+                      );
+
+                      setState(() => _isSaving = false);
+                      return;
+                    } else {
+                      print("✅ Pre meal image found");
+
+                      AppSnackBar.show(
+                        context,
+                        message:
+                            "Your Image has been sent to our team, you'll be notified once it's processed",
+                        type: SnackBarType.success,
+                      );
+                    }
+                  }
+
+                  if (!isImage) {
+                    print("🍽 Manual meal logging flow");
+
+                    final bool hasBulkSelections = selectedMeals.isNotEmpty;
+                    final bool isPlannedMealFallback =
+                        widget.didEatPlanned == true;
+
+                    print("hasBulkSelections = $hasBulkSelections");
+                    print("isPlannedMealFallback = $isPlannedMealFallback");
+
+                    if (isPlannedMealFallback) {
+                      print("➡️ Planned meal flow");
+
+                      if (selectedMealGroups.isEmpty) {
+                        print("❌ No meal groups selected");
+
+                        AppSnackBar.show(
+                          context,
+                          message:
+                              "Please select at least one meal group to log",
+                          type: SnackBarType.error,
+                        );
+
+                        setState(() => _isSaving = false);
+                        return;
+                      }
+
+                      print("✅ Meal groups selected");
+                    } else if (!hasBulkSelections) {
+                      print("➡️ Manual recipe flow");
+
+                      final enteredQuantity = quantityController.text.trim();
+
+                      print("enteredQuantity = $enteredQuantity");
+
+                      if (selectedRecipe == null) {
+                        print("❌ selectedRecipe is NULL");
+
+                        AppSnackBar.show(
+                          context,
+                          message:
+                              "Please select a recipe or select items from your meal plan list before saving",
+                          type: SnackBarType.error,
+                        );
+
+                        setState(() => _isSaving = false);
+                        return;
+                      }
+
+                      print("✅ selectedRecipe = ${selectedRecipe!.recipeCode}");
+
+                      if (enteredQuantity.isEmpty ||
+                          double.tryParse(enteredQuantity) == null ||
+                          double.parse(enteredQuantity) <= 0) {
+                        print("❌ Invalid quantity");
+
+                        AppSnackBar.show(
+                          context,
+                          message:
+                              "Please enter a valid recipe quantity greater than 0",
+                          type: SnackBarType.error,
+                        );
+
+                        setState(() => _isSaving = false);
+                        return;
+                      }
+
+                      print("✅ Quantity valid");
+
+                      print("✅ Proceeding with save");
+                    }
+                  }
+                  print("========================================");
+                  print("🚦 ALL VALIDATIONS PASSED");
+                  print("About to run calorie confirmation");
+                  print("========================================");
+
+                  final shouldSave = await _shouldProceedWithSave();
+
+                  print("========================================");
+                  print("shouldSave = $shouldSave");
+                  print("========================================");
+
+                  if (!shouldSave) {
+                    print("❌ User cancelled save");
+
+                    setState(() => _isSaving = false);
+
+                    return;
+                  }
+                  print("🔥 BEFORE targetDateString");
+                  final targetDateString =
+                      "${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}";
+
+                  print("📅 targetDate = $targetDateString");
+
+                  if (!isImage) {
+                    if (selectedMeals.isNotEmpty) {
+                      print("📦 Bulk meal save");
+                      print("Meal count = ${selectedMeals.length}");
+
+                      for (final meal in selectedMeals) {
+                        print(
+                          "➡️ Saving ${meal.recipeCode} (${meal.mealType}) qty=${meal.quantity}",
+                        );
+
+                        await _dietRecallRepository.logViaSearchChoose(
+                          recipeCode: meal.recipeCode ?? "",
+                          mealSlot: meal.mealType.toLowerCase(),
+                          quantity: meal.quantity.toString(),
+                          didEatAsPlanned: widget.didEatPlanned ?? false,
+                          planId: widget.planId ?? "",
+                          date: targetDateString,
+                          unit: meal.quantityUnit.toString(),
+                        );
+
+                        print("✅ Saved ${meal.recipeCode}");
+                      }
+                    } else if (widget.didEatPlanned == true) {
+                      print("📋 Planned meal save");
+
+                      final firstMeal = savedMeals.firstWhere(
+                        (m) => selectedMealGroups.contains(m.mealType),
+                      );
+
+                      print("Saving ${firstMeal.recipeCode}");
+
+                      await _dietRecallRepository.logViaSearchChoose(
+                        recipeCode: firstMeal.recipeCode ?? "",
+                        mealSlot: firstMeal.mealType.toLowerCase(),
+                        quantity: firstMeal.quantity.toString(),
+                        didEatAsPlanned: widget.didEatPlanned ?? false,
+                        planId: firstMeal.planId,
+                        date: targetDateString,
+                      );
+
+                      print("✅ Planned meal saved");
+                    } else {
+                      print("🥣 Saving manual recipe");
+                      print("recipeCode = ${selectedRecipe?.recipeCode}");
+                      print("mealSlot = ${selectedMealType.toLowerCase()}");
+                      print("quantity = ${quantityController.text.trim()}");
+
+                      await _dietRecallRepository.logViaSearchChoose(
+                        recipeCode: selectedRecipe?.recipeCode ?? "",
+                        mealSlot: selectedMealType.toLowerCase(),
+                        quantity: quantityController.text.trim(),
+                        didEatAsPlanned: widget.didEatPlanned ?? false,
+                        planId: widget.planId ?? "",
+                        date: targetDateString,
+                        unit: recipeUnits.isNotEmpty ? recipeUnits.first : "g",
+                      );
+
+                      print("✅ Manual recipe saved");
+                    }
+                  } else if (isImage && preMealImage != null) {
+                    print("📷 Saving image meal");
+
+                    await _dietRecallRepository.logViaSearchChoose(
+                      recipeCode: selectedRecipe?.recipeCode ?? "",
+                      mealSlot: selectedMealType.toLowerCase(),
+                      quantity: quantityController.text.trim(),
+                      didEatAsPlanned: widget.didEatPlanned ?? false,
+                      planId: widget.planId ?? "",
+                      date: targetDateString,
+                    );
+
+                    print("✅ Image meal saved");
+                  }
+
+                  print("🎉 Save completed successfully");
+
+                  if (!mounted) return;
+
+                  AppSnackBar.show(
+                    context,
+                    message: "Meal Logged successfully",
+                    type: SnackBarType.success,
                   );
+
+                  print("🔄 Fetching recall");
+
+                  await _fetchRecall(selectedDate);
+
+                  print("🧹 Clearing form");
+
+                  setState(() {
+                    searchController.clear();
+                    quantityController.text = "1";
+                    selectedRecipe = null;
+                    selectedMeals.clear();
+                    selectedMealGroups.clear();
+                  });
+
+                  print("✅ Done");
+                } catch (e, st) {
+                  print("❌ ERROR");
+                  print(e);
+                  print(st);
+
+                  AppSnackBar.show(
+                    context,
+                    message: "Failed to save: $e",
+                    type: SnackBarType.error,
+                  );
+                } finally {
+                  print("🏁 Finally block");
+
+                  if (mounted) {
+                    setState(() => _isSaving = false);
+                  }
+
+                  print("========================================");
                 }
-              } else if (widget.didEatPlanned == true) {
-                debugPrint(
-                  "savedMeals: ${savedMeals.map((e) => e.mealType).toList()}",
-                );
-                debugPrint("selectedMealGroups: $selectedMealGroups");
-                final firstMeal = savedMeals.firstWhere(
-                  (m) => selectedMealGroups.contains(m.mealType),
-                );
-
-                await _dietRecallRepository.logViaSearchChoose(
-                  recipeCode: firstMeal.recipeCode ?? "",
-                  mealSlot: firstMeal.mealType.toLowerCase(),
-                  quantity: firstMeal.quantity.toString(),
-                  didEatAsPlanned: widget.didEatPlanned ?? false,
-                  planId: firstMeal.planId,
-                  date: targetDateString,
-                );
-                // for (final group in selectedMealGroups) {
-                //   final mealsToSave = savedMeals.where(
-                //     (m) => m.mealType.toLowerCase() == group.toLowerCase(),
-                //   );
-                //
-                //   for (final meal in mealsToSave) {
-                //     await _dietRecallRepository.logViaSearchChoose(
-                //       recipeCode: meal.recipeCode ?? "",
-                //       mealSlot: meal.mealType.toLowerCase(),
-                //       quantity: meal.quantity.toString(),
-                //       didEatAsPlanned: true,
-                //       planId: meal.planId ?? "",
-                //       date: targetDateString,
-                //     );
-                //   }
-                // }
-              } else {
-                for (final meal in selectedMeals) {
-                  print("Food: ${meal.foodName}");
-                  print("Recipe: ${meal.recipeCode}");
-                  print("Qty: ${meal.quantity}");
-                  print("Unit: ${meal.quantityUnit}");
-                  print("Plan: ${meal.planId}");
-                  print("recipe unit ${recipeUnits.first}");
-                }
-                await _dietRecallRepository.logViaSearchChoose(
-                  recipeCode: selectedRecipe?.recipeCode ?? "",
-                  mealSlot: selectedMealType.toLowerCase(),
-                  quantity: quantityController.text.trim(),
-                  didEatAsPlanned: widget.didEatPlanned ?? false,
-                  planId: widget.planId ?? "",
-                  date: targetDateString,
-                  unit: recipeUnits.first,
-                );
-              }
-            } else if (isImage && preMealImage != null) {
-              await _dietRecallRepository.logViaSearchChoose(
-                recipeCode: selectedRecipe?.recipeCode ?? "",
-                mealSlot: selectedMealType.toLowerCase(),
-                quantity: quantityController.text.trim(),
-                didEatAsPlanned: widget.didEatPlanned ?? false,
-                planId: widget.planId ?? "",
-                date: targetDateString,
-              );
-            }
-
-            if (!mounted) return;
-            AppSnackBar.show(
-              context,
-              message: "Meal Logged successfully",
-              type: SnackBarType.success,
-            );
-
-            setState(() {
-              searchController.clear();
-              quantityController.text = "1";
-              selectedRecipe = null;
-            });
-          } catch (e, stackTrace) {
-            debugPrint("DETAILED ERROR: $e");
-            debugPrint("STACK TRACE: $stackTrace");
-            AppSnackBar.show(
-              context,
-              message: "Failed to save $e",
-              type: SnackBarType.error,
-            );
-          }
-        },
+              },
         style: ElevatedButton.styleFrom(
           backgroundColor: const Color(0xFF007A50),
+          disabledBackgroundColor: const Color(0xFF007A50).withOpacity(0.6),
           elevation: 0,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
           ),
         ),
-        child: const Text(
-          'Save meal log',
-          style: TextStyle(
-            fontSize: 17,
-            fontWeight: FontWeight.w600,
-            color: Colors.white,
-          ),
-        ),
+        child: _isSaving
+            ? const SizedBox(
+                height: 24,
+                width: 24,
+                child: CircularProgressIndicator(
+                  color: Colors.white,
+                  strokeWidth: 2.5,
+                ),
+              )
+            : const Text(
+                'Save meal log',
+                style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+              ),
       ),
     );
   }

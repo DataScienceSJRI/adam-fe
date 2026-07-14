@@ -2,7 +2,7 @@ name: adam
 description: "A new Flutter project."
 publish_to: 'none'
 
-version: 1.0.1+2
+version: 1.0.1+6
 
 environment:
   sdk: ^3.11.4
@@ -26,6 +26,7 @@ dependencies:
   shimmer: ^3.0.0
   package_info_plus: ^8.0.0
   fl_chart: ^1.0.0
+  gal: ^2.3.2
 
 dev_dependencies:
   flutter_test:

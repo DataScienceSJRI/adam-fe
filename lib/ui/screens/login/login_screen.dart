@@ -2,6 +2,7 @@ import 'package:adam/bloc/auth/login_bloc.dart';
 import 'package:adam/data/repositories/auth_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../dashboard/dashboard_wrapper.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -66,6 +67,12 @@ class _LoginScreenState extends State<LoginScreen>
     super.dispose();
   }
 
+  Future<void> _saveConsentFlag() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('has_accepted_consent', true);
+    debugPrint("🛡️ User consent flag saved to SharedPreferences");
+  }
+
   @override
   Widget build(BuildContext context) {
     final double screenHeight = MediaQuery.of(context).size.height;
@@ -76,14 +83,18 @@ class _LoginScreenState extends State<LoginScreen>
         backgroundColor: const Color(0xFFF4F6F5),
         body: SafeArea(
           child: BlocListener<LoginBloc, LoginState>(
-            listener: (context, state) {
+            listener: (context, state) async {
               if (state is LoginSuccess) {
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const MainScreenWrapper(),
-                  ),
-                );
+                await _saveConsentFlag();
+
+                if (context.mounted) {
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const MainScreenWrapper(),
+                    ),
+                  );
+                }
               } else if (state is LoginFailure) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
@@ -197,13 +208,61 @@ class _LoginScreenState extends State<LoginScreen>
                           return ElevatedButton(
                             onPressed: isLoading
                                 ? null
-                                : () {
-                                    BlocProvider.of<LoginBloc>(context).add(
-                                      LoginSubmitted(
-                                        participantId: "${idController.text.trim()}@adam.participant",
-                                        password: passwordController.text,
-                                      ),
+                                : () async {
+                                    final formattedId =
+                                        "${idController.text.trim()}@adam.participant";
+                                    final password = passwordController.text;
+
+                                    if (idController.text.trim().isEmpty ||
+                                        password.trim().isEmpty) {
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        const SnackBar(
+                                          content: Text(
+                                            "Please fill out all fields.",
+                                          ),
+                                          backgroundColor: Colors.redAccent,
+                                          behavior: SnackBarBehavior.floating,
+                                        ),
+                                      );
+                                      return;
+                                    }
+
+                                    final prefs =
+                                        await SharedPreferences.getInstance();
+                                    final bool alreadyConsented =
+                                        prefs.getBool('has_accepted_consent') ??
+                                        false;
+
+                                    debugPrint(
+                                      "✅ Consent Status: $alreadyConsented",
                                     );
+
+                                    if (context.mounted) {
+                                      if (alreadyConsented) {
+                                        BlocProvider.of<LoginBloc>(context).add(
+                                          LoginSubmitted(
+                                            participantId: formattedId,
+                                            password: password,
+                                          ),
+                                        );
+                                      } else {
+                                        _showConsentDialog(
+                                          context,
+                                          onAccept: () {
+                                            BlocProvider.of<LoginBloc>(
+                                              context,
+                                            ).add(
+                                              LoginSubmitted(
+                                                participantId: formattedId,
+                                                password: password,
+                                              ),
+                                            );
+                                          },
+                                        );
+                                      }
+                                    }
                                   },
                             style: ElevatedButton.styleFrom(
                               padding: EdgeInsets.zero,
@@ -262,48 +321,6 @@ class _LoginScreenState extends State<LoginScreen>
                             ),
                           );
                         },
-                      ),
-
-                      const SizedBox(height: 36),
-
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 14,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFEFF8F4),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: const Color(0xFFD6EEE4)),
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              height: 34,
-                              width: 34,
-                              decoration: const BoxDecoration(
-                                color: Color(0xFF009966),
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(
-                                Icons.info_outline,
-                                color: Colors.white,
-                                size: 18,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            const Expanded(
-                              child: Text(
-                                'Your login details were provided by the research team.',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: Colors.black87,
-                                  height: 1.4,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
                       ),
 
                       const SizedBox(height: 48),
@@ -418,6 +435,93 @@ class _LoginScreenState extends State<LoginScreen>
           ),
         ),
       ],
+    );
+  }
+
+  void _showConsentDialog(
+    BuildContext context, {
+    required VoidCallback onAccept,
+  }) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext dialogContext) {
+        return PopScope(
+          canPop: false,
+          child: AlertDialog(
+            backgroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(24),
+            ),
+            title: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFEFF8F4),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.verified_user_outlined,
+                    color: Color(0xFF009966),
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Text(
+                    'Consent Agreement',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF1B1B1B),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            content: const SingleChildScrollView(
+              child: Text(
+                'By proceeding, you explicitly grant consent to collect and process your diet logs, biometrics, and credentials solely for the purposes of the ADAM Diet Study. Your data is strictly protected under institutional health-privacy policies.\n\nYou must agree to these terms to access the dashboard.',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.black87,
+                  height: 1.5,
+                ),
+              ),
+            ),
+            actionsAlignment: MainAxisAlignment.center,
+            actionsPadding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+            actions: [
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF009966),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  onPressed: () {
+                    Navigator.pop(dialogContext);
+
+                    onAccept();
+                  },
+                  child: const Text(
+                    'I Agree & Sign In',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

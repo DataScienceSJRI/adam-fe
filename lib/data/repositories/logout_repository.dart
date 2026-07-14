@@ -21,9 +21,6 @@ class LogoutRepository {
       print("📡 Logout Status: ${response.statusCode}");
       print("📦 Logout Response: ${response.body}");
 
-      /// Clear local storage after logout
-      await prefs.clear();
-
       return response.statusCode == 200 || response.statusCode == 201;
     } catch (e) {
       print("❌ Logout Error: $e");
