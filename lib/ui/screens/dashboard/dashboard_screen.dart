@@ -144,72 +144,6 @@ class DashboardScreenState extends State<DashboardScreen> {
                         ),
                       ),
                     ),
-                    // Container(
-                    //   width: double.infinity,
-                    //   padding: const EdgeInsets.all(20),
-                    //
-                    //   decoration: BoxDecoration(
-                    //     gradient: const LinearGradient(
-                    //       colors: [Color(0xFF0F5132), Color(0xFF1B7A4B)],
-                    //       begin: Alignment.topLeft,
-                    //       end: Alignment.bottomRight,
-                    //     ),
-                    //
-                    //     borderRadius: BorderRadius.circular(24),
-                    //   ),
-                    //
-                    //   child: Column(
-                    //     crossAxisAlignment: CrossAxisAlignment.start,
-                    //
-                    //     children: [
-                    //       const Text(
-                    //         'Today Overview',
-                    //         style: TextStyle(
-                    //           color: Colors.white70,
-                    //           fontSize: 14,
-                    //           fontWeight: FontWeight.w500,
-                    //         ),
-                    //       ),
-                    //
-                    //       const SizedBox(height: 8),
-                    //
-                    //       Text(
-                    //         dashboard.date ?? '',
-                    //         style: const TextStyle(
-                    //           color: Colors.white,
-                    //           fontSize: 22,
-                    //           fontWeight: FontWeight.bold,
-                    //         ),
-                    //       ),
-                    //
-                    //       const SizedBox(height: 18),
-                    //
-                    //       Row(
-                    //         children: [
-                    //           Expanded(
-                    //             child: _buildOverviewTile(
-                    //               'Score',
-                    //               dashboard.bloodSugarControlScore
-                    //                       ?.toStringAsFixed(1) ??
-                    //                   '--',
-                    //               Icons.favorite,
-                    //             ),
-                    //           ),
-                    //
-                    //           const SizedBox(width: 12),
-                    //
-                    //           Expanded(
-                    //             child: _buildOverviewTile(
-                    //               'Calories',
-                    //               '${dashboard.getIntakeFor('Energy', 0.0).toStringAsFixed(0)} kcal',
-                    //               Icons.local_fire_department,
-                    //             ),
-                    //           ),
-                    //         ],
-                    //       ),
-                    //     ],
-                    //   ),
-                    // ),
                     _dashboardMainCard(dashboard),
                     const SizedBox(height: 14),
                     _buildCombinedMetricsCard(dashboard),
@@ -724,26 +658,41 @@ class DashboardScreenState extends State<DashboardScreen> {
                                       CrossAxisAlignment.baseline,
                                   textBaseline: TextBaseline.alphabetic,
                                   children: [
-                                    Text(
-                                      actualGl?.toStringAsFixed(1) ?? '--',
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w800,
-                                        color: actualGl != null
-                                            ? const Color(0xFF1E293B)
-                                            : const Color(0xFFCBD5E1),
-                                      ),
-                                    ),
-                                    if (actualGl != null) ...[
-                                      const SizedBox(width: 1),
-                                      Text(
-                                        'gl',
-                                        style: TextStyle(
-                                          fontSize: 8,
-                                          color: statusColor,
+                                    Flexible(
+                                      child: FittedBox(
+                                        fit: BoxFit.scaleDown,
+                                        alignment: Alignment.centerLeft,
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.baseline,
+                                          textBaseline: TextBaseline.alphabetic,
+                                          children: [
+                                            Text(
+                                              actualGl?.toStringAsFixed(1) ??
+                                                  '--',
+                                              style: TextStyle(
+                                                fontSize: 16,
+                                                fontWeight: FontWeight.w800,
+                                                color: actualGl != null
+                                                    ? const Color(0xFF1E293B)
+                                                    : const Color(0xFFCBD5E1),
+                                              ),
+                                            ),
+                                            if (actualGl != null) ...[
+                                              const SizedBox(width: 2),
+                                              Text(
+                                                'gL',
+                                                style: TextStyle(
+                                                  fontSize: 8,
+                                                  color: statusColor,
+                                                ),
+                                              ),
+                                            ],
+                                          ],
                                         ),
                                       ),
-                                    ],
+                                    ),
                                   ],
                                 ),
                               ],
@@ -798,6 +747,8 @@ class DashboardScreenState extends State<DashboardScreen> {
       {
         "name": "Breakfast",
         "icon": Icons.wb_twilight,
+        "planned": dashboard.glByMeal['breakfast']?.planned,
+        "actual": dashboard.glByMeal['breakfast']?.actual,
         "weighted_avg": dashboard.glByMeal['breakfast']?.weightedAvgPast14d,
         "yesterday": dashboard.glByMeal['breakfast']?.yesterday,
         "indicator": dashboard.glByMeal['breakfast']?.indicator,
@@ -805,6 +756,8 @@ class DashboardScreenState extends State<DashboardScreen> {
       {
         "name": "Lunch",
         "icon": Icons.wb_sunny_outlined,
+        "planned": dashboard.glByMeal['lunch']?.planned,
+        "actual": dashboard.glByMeal['lunch']?.actual,
         "weighted_avg": dashboard.glByMeal['lunch']?.weightedAvgPast14d,
         "yesterday": dashboard.glByMeal['lunch']?.yesterday,
         "indicator": dashboard.glByMeal['lunch']?.indicator,
@@ -812,6 +765,8 @@ class DashboardScreenState extends State<DashboardScreen> {
       {
         "name": "Dinner",
         "icon": Icons.dark_mode_outlined,
+        "planned": dashboard.glByMeal['dinner']?.planned,
+        "actual": dashboard.glByMeal['dinner']?.actual,
         "weighted_avg": dashboard.glByMeal['dinner']?.weightedAvgPast14d,
         "yesterday": dashboard.glByMeal['dinner']?.yesterday,
         "indicator": dashboard.glByMeal['dinner']?.indicator,
@@ -819,6 +774,8 @@ class DashboardScreenState extends State<DashboardScreen> {
       {
         "name": "Snacks",
         "icon": Icons.cookie_outlined,
+        "planned": dashboard.glByMeal['snacks']?.planned,
+        "actual": dashboard.glByMeal['snacks']?.actual,
         "weighted_avg": dashboard.glByMeal['snacks']?.weightedAvgPast14d,
         "yesterday": dashboard.glByMeal['snacks']?.yesterday,
         "indicator": dashboard.glByMeal['snacks']?.indicator,
@@ -826,6 +783,8 @@ class DashboardScreenState extends State<DashboardScreen> {
       {
         "name": "Per Day Total",
         "icon": Icons.analytics_outlined,
+        "planned": dashboard.glByMeal['per_day']?.planned,
+        "actual": dashboard.glByMeal['per_day']?.actual,
         "weighted_avg": dashboard.glByMeal['per_day']?.weightedAvgPast14d,
         "yesterday": dashboard.glByMeal['per_day']?.yesterday,
         "indicator": dashboard.glByMeal['per_day']?.indicator,
@@ -855,12 +814,16 @@ class DashboardScreenState extends State<DashboardScreen> {
             crossAxisCount: 2,
             crossAxisSpacing: 12,
             mainAxisSpacing: 12,
-            mainAxisExtent: 180,
+            mainAxisExtent: 200,
           ),
           itemBuilder: (context, index) {
             final meal = meals[index];
-            final double? yesterdayGl = meal['yesterday'] as double?;
-            final double? avg14dGl = meal['weighted_avg'] as double?;
+            final double? yesterday = (meal['yesterday'] as num?)?.toDouble();
+            final double? avg14dActual =
+                meal['weighted_avg_past_14d_planned'] as double?;
+            final double? avg14dPlanned =
+                meal['weighted_avg_past_14d'] as double?;
+
             final String? indicator = meal['indicator'] as String?;
             final bool isTotal = meal['isTotal'] == true;
 
@@ -936,10 +899,12 @@ class DashboardScreenState extends State<DashboardScreen> {
                         Icon(statusIcon, size: 14, color: statusColor),
                     ],
                   ),
+                  _buildCompactMetricRow("YESTERDAY", yesterday),
+                  _buildCompactMetricRow("14 DAY ACTUAL", avg14dActual),
 
-                  _buildCompactMetricRow("YESTERDAY", yesterdayGl),
                   Divider(height: 1, color: borderAccent.withOpacity(0.5)),
-                  _buildCompactMetricRow("14D AVG", avg14dGl),
+
+                  _buildCompactMetricRow("14 DAY PLANNED", avg14dPlanned),
 
                   Container(
                     padding: const EdgeInsets.symmetric(vertical: 4),
@@ -980,9 +945,9 @@ class DashboardScreenState extends State<DashboardScreen> {
           ),
         ),
         Text(
-          value != null ? value.toStringAsFixed(0) : '--',
+          value != null ? value.toStringAsFixed(1) : '--',
           style: const TextStyle(
-            fontSize: 12,
+            fontSize: 11,
             fontWeight: FontWeight.w900,
             color: Color(0xFF111827),
           ),

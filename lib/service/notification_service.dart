@@ -14,6 +14,10 @@ class NotificationService {
     OneSignal.Debug.setLogLevel(OSLogLevel.verbose);
 
     OneSignal.initialize("74ebcb76-b454-4145-9510-09f5d6041e25");
+    OneSignal.Notifications.addForegroundWillDisplayListener((event) {
+      print("🔔 Foreground notification received: ${event.notification.title}");
+      event.notification.display();
+    });
 
     await OneSignal.Notifications.requestPermission(true);
     OneSignal.Notifications.addClickListener((event) async {

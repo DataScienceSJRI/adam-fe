@@ -1,6 +1,7 @@
 import 'package:adam/ui/screens/activity/activity_log_screen.dart';
 import 'package:adam/ui/screens/dashboard/dashboard_screen.dart';
 import 'package:adam/ui/screens/log_meal/diet_recall_screen.dart';
+import 'package:adam/ui/screens/log_meal/log_meal_screen.dart';
 import 'package:adam/ui/screens/meal_plan/plan_meal_screen.dart';
 import 'package:adam/ui/screens/profile/profile_screen.dart';
 import 'package:adam/ui/utils/bottom_nav_bar.dart';
@@ -20,7 +21,7 @@ class _MainScreenWrapperState extends State<MainScreenWrapper> {
   final List<Widget> _pages = [
     const DashboardScreen(),
     const MealPlanScreen(),
-    const DietRecallScreen(),
+    const LogMealScreen(),
     const ActivityLogScreen(),
     const ProfileScreen(),
   ];
