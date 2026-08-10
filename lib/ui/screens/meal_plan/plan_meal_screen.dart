@@ -874,10 +874,11 @@ class MealPlanScreenState extends State<MealPlanScreen> {
     required MealPlanModel currentMeal,
     required List<dynamic> sameCategory,
     required List<dynamic> newCategory,
+    VoidCallback? onTap,
   }) {
     int selectedIndex = -1;
-    int selectedTabIndex =
-        0; // 0 = Category (sameCategory), 1 = Overall (newCategory)
+    int selectedTabIndex = 0;
+    bool isLoading = false;
 
     showModalBottomSheet(
       context: parentContext,
@@ -890,265 +891,301 @@ class MealPlanScreenState extends State<MealPlanScreen> {
                 ? sameCategory
                 : newCategory;
 
-            return Container(
-              height: MediaQuery.of(context).size.height * 0.85,
-              decoration: const BoxDecoration(
-                color: Color(0xFFF7F7F7),
-                borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-              ),
-              child: Column(
-                children: [
-                  const SizedBox(height: 10),
+            return GestureDetector(
+              onTap: onTap,
+              child: Container(
+                height: MediaQuery.of(context).size.height * 0.85,
+                decoration: const BoxDecoration(
+                  color: Color(0xFFF7F7F7),
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+                ),
+                child: Column(
+                  children: [
+                    const SizedBox(height: 10),
 
-                  // Drag Indicator
-                  Container(
-                    width: 46,
-                    height: 5,
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade400,
-                      borderRadius: BorderRadius.circular(20),
+                    // Drag Indicator
+                    Container(
+                      width: 46,
+                      height: 5,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade400,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
                     ),
-                  ),
 
-                  const SizedBox(height: 16),
+                    const SizedBox(height: 16),
 
-                  // Title & Close Button
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: Row(
-                      children: [
-                        const Text(
-                          'Swap food item',
-                          style: TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const Spacer(),
-                        IconButton(
-                          onPressed: () => Navigator.pop(context),
-                          icon: const Icon(Icons.close),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  Expanded(
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.symmetric(horizontal: 18),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                    // Title & Close Button
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Row(
                         children: [
                           const Text(
-                            "CURRENTLY PLANNED",
+                            'Swap food item',
                             style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.black54,
+                              fontSize: 22,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
-
-                          const SizedBox(height: 12),
-
-                          _foodTile(
-                            image: currentMeal.imageUrl,
-                            title: currentMeal.foodName,
-                            kcal:
-                                "${currentMeal.calories.toStringAsFixed(0)} kcal",
-                            tag: currentMeal.quantity.toString(),
-                            selected: false,
-                            glValue: currentMeal.glValue,
+                          const Spacer(),
+                          IconButton(
+                            onPressed: isLoading
+                                ? null
+                                : () => Navigator.pop(context),
+                            icon: const Icon(Icons.close),
                           ),
-
-                          const SizedBox(height: 24),
-
-                          const Text(
-                            "CHOOSE AN ALTERNATIVE",
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.black54,
-                            ),
-                          ),
-
-                          const SizedBox(height: 12),
-
-                          // Tab Bar Toggle Container
-                          Container(
-                            padding: const EdgeInsets.all(4),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFEFEFEF),
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            child: Row(
-                              children: [
-                                _buildTabItem(
-                                  title: "Category",
-                                  badgeCount: sameCategory.length,
-                                  isSelected: selectedTabIndex == 0,
-                                  onTap: () {
-                                    setModalState(() {
-                                      selectedTabIndex = 0;
-                                      selectedIndex =
-                                          -1; // Reset selection on tab switch
-                                    });
-                                  },
-                                ),
-                                _buildTabItem(
-                                  title: "Overall",
-                                  badgeCount: newCategory.length,
-                                  isSelected: selectedTabIndex == 1,
-                                  onTap: () {
-                                    setModalState(() {
-                                      selectedTabIndex = 1;
-                                      selectedIndex =
-                                          -1; // Reset selection on tab switch
-                                    });
-                                  },
-                                ),
-                              ],
-                            ),
-                          ),
-
-                          const SizedBox(height: 16),
-
-                          // Active List Renderer
-                          if (activeList.isEmpty)
-                            Container(
-                              padding: const EdgeInsets.symmetric(vertical: 36),
-                              alignment: Alignment.center,
-                              child: Text(
-                                "No options available in this section",
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.grey.shade600,
-                                ),
-                              ),
-                            )
-                          else
-                            ...activeList.asMap().entries.map((entry) {
-                              final index = entry.key;
-                              final group = entry.value;
-                              final item = group[0];
-
-                              return Padding(
-                                padding: const EdgeInsets.only(bottom: 12),
-                                child: GestureDetector(
-                                  onTap: () {
-                                    setModalState(() {
-                                      selectedIndex = index;
-                                    });
-                                  },
-                                  child: _foodTile(
-                                    image:
-                                        'https://datatools.sjri.res.in/static/VD/food_images_large/${item['recipe_code']}.jpg',
-                                    title: item['recipe_name'] ?? '',
-                                    kcal: "${item['quantity']} ${item['unit']}",
-                                    tag: item['recipe_code'],
-                                    glValue: item['gl'],
-                                    selected: selectedIndex == index,
-                                  ),
-                                ),
-                              );
-                            }),
-
-                          const SizedBox(height: 120),
                         ],
                       ),
                     ),
-                  ),
 
-                  // Submit Request Button
-                  Container(
-                    padding: const EdgeInsets.fromLTRB(18, 14, 18, 24),
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.vertical(
-                        top: Radius.circular(18),
+                    const SizedBox(height: 12),
+
+                    Expanded(
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.symmetric(horizontal: 18),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              "CURRENTLY PLANNED",
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.black54,
+                              ),
+                            ),
+
+                            const SizedBox(height: 12),
+
+                            _foodTile(
+                              image: currentMeal.imageUrl,
+                              title: currentMeal.foodName,
+                              kcal:
+                                  "${currentMeal.calories.toStringAsFixed(0)} kcal",
+                              tag: currentMeal.quantity.toString(),
+                              selected: false,
+                              glValue: currentMeal.glValue,
+                            ),
+
+                            const SizedBox(height: 24),
+
+                            const Text(
+                              "CHOOSE AN ALTERNATIVE",
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.black54,
+                              ),
+                            ),
+
+                            const SizedBox(height: 12),
+
+                            // Tab Bar Toggle Container
+                            Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFEFEFEF),
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: Row(
+                                children: [
+                                  _buildTabItem(
+                                    title: "Category",
+                                    badgeCount: sameCategory.length,
+                                    isSelected: selectedTabIndex == 0,
+                                    onTap: isLoading
+                                        ? () {} // Fixed: Return empty closure instead of null
+                                        : () {
+                                            setModalState(() {
+                                              selectedTabIndex = 0;
+                                              selectedIndex = -1;
+                                            });
+                                          },
+                                  ),
+                                  _buildTabItem(
+                                    title: "Overall",
+                                    badgeCount: newCategory.length,
+                                    isSelected: selectedTabIndex == 1,
+                                    onTap: isLoading
+                                        ? () {} // Fixed: Return empty closure instead of null
+                                        : () {
+                                            setModalState(() {
+                                              selectedTabIndex = 1;
+                                              selectedIndex = -1;
+                                            });
+                                          },
+                                  ),
+                                ],
+                              ),
+                            ),
+
+                            const SizedBox(height: 16),
+
+                            // Active List Renderer
+                            if (activeList.isEmpty)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 36,
+                                ),
+                                alignment: Alignment.center,
+                                child: Text(
+                                  "No options available in this section",
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.grey.shade600,
+                                  ),
+                                ),
+                              )
+                            else
+                              ...activeList.asMap().entries.map((entry) {
+                                final index = entry.key;
+                                final group = entry.value;
+                                final item = group[0];
+
+                                return Padding(
+                                  padding: const EdgeInsets.only(bottom: 12),
+                                  child: GestureDetector(
+                                    onTap: isLoading
+                                        ? null
+                                        : () {
+                                            setModalState(() {
+                                              selectedIndex = index;
+                                            });
+                                          },
+                                    child: _foodTile(
+                                      image:
+                                          'https://datatools.sjri.res.in/static/VD/food_images_large/${item['recipe_code']}.jpg',
+                                      title: item['recipe_name'] ?? '',
+                                      kcal:
+                                          "${item['quantity']} ${item['unit']}",
+                                      tag: item['recipe_code'],
+                                      glValue: item['gl'],
+                                      selected: selectedIndex == index,
+                                    ),
+                                  ),
+                                );
+                              }),
+
+                            const SizedBox(height: 120),
+                          ],
+                        ),
                       ),
                     ),
-                    child: SizedBox(
-                      width: double.infinity,
-                      height: 56,
-                      child: ElevatedButton(
-                        onPressed: selectedIndex == -1
-                            ? null
-                            : () async {
-                                try {
-                                  final selectedItem =
-                                      activeList[selectedIndex][0];
-                                  final targetDateString =
-                                      "${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}";
 
-                                  final response = await MealPlanRepository()
-                                      .sendSwapRequest(
-                                        date: targetDateString,
-                                        mealSlot: currentMeal.mealType
-                                            .toLowerCase(),
-                                        recipeCodes: [
-                                          selectedItem['recipe_code'],
-                                        ],
-                                        orignalRecipeCodes: [
-                                          currentMeal.recipeCode ?? "",
-                                        ],
+                    // Submit Request Button
+                    Container(
+                      padding: const EdgeInsets.fromLTRB(18, 14, 18, 24),
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.vertical(
+                          top: Radius.circular(18),
+                        ),
+                      ),
+                      child: SizedBox(
+                        width: double.infinity,
+                        height: 56,
+                        child: ElevatedButton(
+                          onPressed: (selectedIndex == -1 || isLoading)
+                              ? null
+                              : () async {
+                                  setModalState(() {
+                                    isLoading = true;
+                                  });
+
+                                  try {
+                                    final selectedItem =
+                                        activeList[selectedIndex][0];
+                                    final targetDateString =
+                                        "${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}";
+
+                                    final response = await MealPlanRepository()
+                                        .sendSwapRequest(
+                                          date: targetDateString,
+                                          mealSlot: currentMeal.mealType
+                                              .toLowerCase(),
+                                          recipeCodes: [
+                                            selectedItem['recipe_code'],
+                                          ],
+                                          orignalRecipeCodes: [
+                                            currentMeal.recipeCode ?? "",
+                                          ],
+                                        );
+
+                                    final isPossible =
+                                        response['possible'] ?? false;
+
+                                    if (isPossible) {
+                                      if (!context.mounted) return;
+                                      Navigator.pop(context);
+                                      AppSnackBar.show(
+                                        context,
+                                        message:
+                                            "Swap request sent successfully",
+                                        type: SnackBarType.success,
                                       );
-
-                                  final isPossible =
-                                      response['possible'] ?? false;
-
-                                  if (isPossible) {
-                                    if (!mounted) return;
-                                    Navigator.pop(context);
-                                    AppSnackBar.show(
-                                      context,
-                                      message: "Swap request sent successfully",
-                                      type: SnackBarType.success,
-                                    );
-                                    BlocProvider.of<MealPlanBloc>(
-                                      parentContext,
-                                    ).add(
-                                      FetchMealPlanEvent(
-                                        date: targetDateString,
-                                        forceRefresh: true,
-                                      ),
-                                    );
-                                  } else {
-                                    Navigator.pop(context);
-                                    AppSnackBar.show(
-                                      context,
-                                      message: "Not able to swap this item",
-                                      type: SnackBarType.error,
-                                    );
+                                      BlocProvider.of<MealPlanBloc>(
+                                        parentContext,
+                                      ).add(
+                                        FetchMealPlanEvent(
+                                          date: targetDateString,
+                                          forceRefresh: true,
+                                        ),
+                                      );
+                                    } else {
+                                      if (!context.mounted) return;
+                                      Navigator.pop(context);
+                                      AppSnackBar.show(
+                                        context,
+                                        message: "Not able to swap this item",
+                                        type: SnackBarType.error,
+                                      );
+                                    }
+                                  } catch (e) {
+                                    print("❌ SEND SWAP ERROR ===== $e");
+                                    if (context.mounted) {
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        SnackBar(content: Text(e.toString())),
+                                      );
+                                    }
+                                  } finally {
+                                    if (context.mounted) {
+                                      setModalState(() {
+                                        isLoading = false;
+                                      });
+                                    }
                                   }
-                                } catch (e) {
-                                  print("❌ SEND SWAP ERROR ===== $e");
-
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text(e.toString())),
-                                  );
-                                }
-                              },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF007A50),
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
+                                },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF007A50),
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
                           ),
-                        ),
-                        child: const Text(
-                          'Send swap request',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
-                          ),
+                          child: isLoading
+                              ? const SizedBox(
+                                  height: 24,
+                                  width: 24,
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                    strokeWidth: 2.5,
+                                  ),
+                                )
+                              : const Text(
+                                  'Send swap request',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.white,
+                                  ),
+                                ),
                         ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             );
           },
