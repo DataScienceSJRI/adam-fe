@@ -1,12 +1,9 @@
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:adam/core/constants/api_endpoints.dart';
 import 'package:adam/data/models/plan_meal_model.dart';
 import 'package:adam/service/api_service.dart';
 import 'package:adam/service/token_manager.dart';
-import 'package:intl/intl.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 class MealPlanRepository {
   final ApiService _apiService = ApiService();
@@ -14,58 +11,13 @@ class MealPlanRepository {
 
   MealPlanRepository();
 
-  // Future<List<MealPlanModel>> fetchMealPlan({required String date}) async {
-  //   try {
-  //     print("========== FETCH MEAL PLAN ==========");
-  //
-  //     final prefs = await SharedPreferences.getInstance();
-  //     final token = prefs.getString('access_token');
-  //
-  //     print("🔑 TOKEN ===== $token");
-  //
-  //     final response = await _apiService.get(
-  //       "${ApiEndpoints.getPlanDaily}?plan_date=$date",
-  //       headers: {
-  //         'accept': 'application/json',
-  //         'Authorization': 'Bearer $token',
-  //       },
-  //     );
-  //
-  //     print("📦 RESPONSE ===== $response");
-  //
-  //     final List plans = response['meals'] ?? response;
-  //
-  //     return plans.map((e) => MealPlanModel.fromJson(e)).toList();
-  //   } catch (e) {
-  //     print("❌ ERROR ===== $e");
-  //
-  //     // Changed from FormatException to HttpException
-  //     throw const HttpException('The connection timed out. Please try again.');
-  //     // throw Exception("Failed to fetch meal plan: $e");
-  //   }
-  // }
-  Future<List<MealPlanModel>> fetchMealPlan({required String date, bool forceRefresh = false,}) async {
+  Future<List<MealPlanModel>> fetchMealPlan({
+    required String date,
+    bool forceRefresh = false,
+  }) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-
-      final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
-
-      if (date == today && !forceRefresh) {
-        final savedDate = prefs.getString('meal_plan_date');
-        final cachedData = prefs.getString('meal_plan_data');
-
-        if (savedDate == today && cachedData != null) {
-          print("📦 LOADING MEAL PLAN FROM CACHE");
-
-          final List decoded = jsonDecode(cachedData);
-
-          return decoded.map((e) => MealPlanModel.fromJson(e)).toList();
-        }
-      }
-
       print("🌐 FETCHING MEAL PLAN FROM API");
 
-      // final token = prefs.getString('access_token');
       final token = await tokenManager.getValidAccessToken();
 
       final response = await _apiService.get(
@@ -80,34 +32,10 @@ class MealPlanRepository {
 
       final meals = plans.map((e) => MealPlanModel.fromJson(e)).toList();
 
-      if (date == today) {
-        await prefs.setString('meal_plan_date', today);
-
-        await prefs.setString(
-          'meal_plan_data',
-          jsonEncode(meals.map((e) => e.toJson()).toList()),
-        );
-
-        print("💾 TODAY'S MEAL PLAN SAVED");
-      }
-
       return meals;
     } catch (e) {
       print("❌ ERROR ===== $e");
       throw const HttpException('The connection timed out. Please try again.');
-    }
-  }
-
-  Future<void> clearExpiredMealPlan() async {
-    final prefs = await SharedPreferences.getInstance();
-
-    final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
-
-    final savedDate = prefs.getString('meal_plan_date');
-
-    if (savedDate != today) {
-      await prefs.remove('meal_plan_date');
-      await prefs.remove('meal_plan_data');
     }
   }
 
@@ -116,13 +44,11 @@ class MealPlanRepository {
     required String day,
     required String? recipeCode,
     required String mealSlot,
+    required double quantity,
   }) async {
     try {
       print("========== FETCH REPLACEMENT ==========");
 
-      // final prefs = await SharedPreferences.getInstance();
-
-      // final token = prefs.getString('access_token');
       final token = await tokenManager.getValidAccessToken();
 
       print("🔑 TOKEN ===== $token");
@@ -132,7 +58,8 @@ class MealPlanRepository {
           "?date=$date"
           "&day=$day"
           "&meal_slot=$mealSlot"
-          "&recipe_codes=$recipeCode";
+          "&recipe_codes=$recipeCode"
+          "&recipe_quantities=$quantity";
 
       print("🔗 URL ===== $url");
 
@@ -146,7 +73,9 @@ class MealPlanRepository {
 
       print("📦 FULL RESPONSE ===== $response");
 
-      print("📦 ALTERNATIVES ===== ${response['alternatives']}");
+      print("📦 ALTERNATIVES ===== ${response['new_mapping']}");
+      print("📦 ALTERNATIVES ===== ${response['same_category']}");
+
 
       return response;
     } catch (e) {
@@ -163,9 +92,6 @@ class MealPlanRepository {
     required List<String> orignalRecipeCodes,
   }) async {
     try {
-      // final prefs = await SharedPreferences.getInstance();
-      //
-      // final token = prefs.getString('access_token');
       final token = await tokenManager.getValidAccessToken();
 
       final body = {
@@ -207,9 +133,6 @@ class MealPlanRepository {
     try {
       print("========== SEND MEAL REACTION ==========");
 
-      // final prefs = await SharedPreferences.getInstance();
-      //
-      // final token = prefs.getString('access_token');
       final token = await tokenManager.getValidAccessToken();
 
       print("🔑 TOKEN ===== $token");
@@ -254,9 +177,6 @@ class MealPlanRepository {
     try {
       print("========== SEND MEAL REACTION ==========");
 
-      // final prefs = await SharedPreferences.getInstance();
-      //
-      // final token = prefs.getString('access_token');
       final token = await tokenManager.getValidAccessToken();
 
       print("🔑 TOKEN ===== $token");
@@ -299,9 +219,6 @@ class MealPlanRepository {
     try {
       print("========== GET MEAL REACTION ==========");
 
-      // final prefs = await SharedPreferences.getInstance();
-      //
-      // final token = prefs.getString('access_token');
       final token = await tokenManager.getValidAccessToken();
 
       print("🔑 TOKEN ===== $token");

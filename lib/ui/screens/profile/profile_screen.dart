@@ -1,6 +1,5 @@
 import 'package:adam/bloc/auth/logout_bloc.dart';
 import 'package:adam/bloc/profile/profile_bloc.dart';
-import 'package:adam/data/models/profile_model.dart';
 import 'package:adam/data/repositories/logout_repository.dart';
 import 'package:adam/data/repositories/profile_repository.dart';
 import 'package:adam/ui/screens/login/login_screen.dart';
@@ -11,44 +10,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
-
-  Widget _modernField(
-    TextEditingController controller,
-    String hint,
-    IconData icon,
-  ) {
-    return TextField(
-      controller: controller,
-      decoration: InputDecoration(
-        hintText: hint,
-
-        prefixIcon: Icon(icon, color: const Color(0xFF008C5E)),
-
-        filled: true,
-        fillColor: const Color(0xFFF8FAF9),
-
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 16,
-        ),
-
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide.none,
-        ),
-
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide(color: Colors.grey.shade200),
-        ),
-
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: Color(0xFF008C5E), width: 1.5),
-        ),
-      ),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {

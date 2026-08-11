@@ -73,7 +73,6 @@ class DietRecallRepository {
     required String mealSlot,
     required String quantity,
     required String planId,
-    required bool didEatAsPlanned,
     required String date,
     String? unit,
   }) async {
@@ -97,7 +96,6 @@ class DietRecallRepository {
       final body = {
         "recipe_codes": [recipeCode],
         "date": date,
-        "did_eat_as_planned": didEatAsPlanned,
         "meal_slot": mealSlot.toLowerCase(),
         "actual_quantities": [quantity],
         "plan_id": planId,
@@ -341,7 +339,6 @@ class DietRecallRepository {
   Future<void> editRecall({
     required String recallId,
     required String mealSlot,
-    required bool didEatAsPlanned,
     required String quantity,
     String? recipeCode,
     required String foodName,
@@ -349,7 +346,6 @@ class DietRecallRepository {
   }) async {
     final body = {
       "food_qty": quantity,
-      "did_eat_as_planned": didEatAsPlanned,
       "meal_slot": mealSlot.toLowerCase(),
       "recipe_code": recipeCode,
       "food_name": foodName,

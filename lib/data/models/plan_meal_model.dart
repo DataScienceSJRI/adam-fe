@@ -13,6 +13,7 @@ class MealPlanModel {
   final String? reaction;
   final String? comboReaction;
   final double? glValue;
+  final double? quantityGram;
 
   MealPlanModel({
     required this.pkey,
@@ -29,6 +30,7 @@ class MealPlanModel {
     required this.reaction,
     required this.comboReaction,
     required this.glValue,
+    this.quantityGram,
   });
 
   factory MealPlanModel.fromJson(Map<String, dynamic> json) {
@@ -49,6 +51,9 @@ class MealPlanModel {
       glValue: json['GL'] == null
           ? null
           : double.tryParse(json['GL'].toString()),
+      quantityGram: json['Recipe_weight_optimal_g'] == null
+          ? null
+          : double.tryParse(json['Recipe_weight_optimal_g'].toString()),
     );
   }
 
