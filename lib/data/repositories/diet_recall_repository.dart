@@ -151,11 +151,9 @@ class DietRecallRepository {
     String? imageUrlPost,
     required String mealSlot,
     required String planId,
+    String? note,
   }) async {
     try {
-      // final prefs = await SharedPreferences.getInstance();
-      //
-      // final token = prefs.getString('access_token');
       final token = await tokenManager.getValidAccessToken();
 
       if (token == null || token.isEmpty) {
@@ -166,6 +164,7 @@ class DietRecallRepository {
         "image_url_pre": imageUrlPre,
         "meal_slot": mealSlot,
         "plan_id": planId,
+        "note": note ?? "",
       };
 
       if (imageUrlPost != null) {
@@ -200,8 +199,6 @@ class DietRecallRepository {
     required String date,
   }) async {
     try {
-      // final prefs = await SharedPreferences.getInstance();
-      // final token = prefs.getString('access_token');
       final token = await tokenManager.getValidAccessToken();
 
       if (token == null || token.isEmpty) {
@@ -314,9 +311,7 @@ class DietRecallRepository {
     }
   }
 
-  Future<dynamic> deleteRecall({
-    required String recallId,
-  }) async {
+  Future<dynamic> deleteRecall({required String recallId}) async {
     try {
       final token = await tokenManager.getValidAccessToken();
 
@@ -336,13 +331,13 @@ class DietRecallRepository {
       rethrow;
     }
   }
+
   Future<void> editRecall({
     required String recallId,
     required String mealSlot,
     required String quantity,
     String? recipeCode,
     required String foodName,
-
   }) async {
     final body = {
       "food_qty": quantity,
